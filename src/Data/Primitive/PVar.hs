@@ -1,4 +1,5 @@
 {-# LANGUAGE MagicHash #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UnboxedTuples #-}
 -- |
 -- Module      : Data.Primitive.PVar
@@ -11,8 +12,8 @@
 module Data.Primitive.PVar
   ( PVar
   , newPVar
-  , newPinnedPVar
-  , newAlignedPinnedPVar
+  , withPVarST
+  -- * Generic Operations
   , readPVar
   , writePVar
   , modifyPVar
@@ -24,6 +25,8 @@ module Data.Primitive.PVar
   , copyPVar
   , sizeOfPVar
   -- * Pinned memory
+  , newPinnedPVar
+  , newAlignedPinnedPVar
   , withPtrPVar
   , copyPVarToPtr
   , toForeignPtr
@@ -45,9 +48,16 @@ module Data.Primitive.PVar
   , atomicNandIntPVar
   , atomicOrIntPVar
   , atomicXorIntPVar
+  -- ** Re-exports
+  , Prim
+  , PrimMonad(PrimState)
+  , RealWorld
+  , ST
+  , runST
   ) where
 
 import Control.Monad (void)
+import Control.Monad.ST (ST, runST)
 import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_, touch)
 import Data.Primitive.PVar.Internal
 import Data.Primitive.PVar.Unsafe
@@ -66,6 +76,15 @@ sizeOfPVar pvar = I# (sizeOfPVar# pvar)
 isPinnedPVar :: PVar s a -> Bool
 isPinnedPVar (PVar mba#) = isTrue# (isMutableByteArrayPinned# mba#)
 {-# INLINE isPinnedPVar #-}
+
+-- | Run an ST action on a mutable PVar variable.
+withPVarST ::
+     Prim p
+  => p -- ^ Initial value assigned to the mutable variable
+  -> (forall s. PVar s p -> ST s a) -- ^ Action to run
+  -> a -- ^ Reslt produced by the ST action
+withPVarST x st = runST (newPVar x >>= st)
+{-# INLINE withPVarST #-}
 
 -- | Apply an action to the Ptr that references the mutable variable, but only if it is
 -- backed by pinned memory, cause otherwise it would not be safe.
