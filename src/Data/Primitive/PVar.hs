@@ -39,6 +39,7 @@ module Data.Primitive.PVar
   , (=%)
   -- ** Atomic operations
   , atomicModifyIntPVar
+  , atomicModifyIntPVar_
   , atomicReadIntPVar
   , atomicWriteIntPVar
   , casIntPVar
@@ -182,19 +183,6 @@ swapPVars_ pvar1 pvar2 = void $ swapPVars pvar1 pvar2
 (=%) :: (PrimMonad m, Prim a, Integral a) => PVar (PrimState m) a -> a -> m ()
 (=%) pvar a = modifyPVar_ pvar (`mod` a)
 {-# INLINE (=%) #-}
-
-
--- | Apply a function to an integer element of a `PVar` atomically. Implies a full memory
--- barrier.
---
--- @since 0.1.0
-atomicModifyIntPVar ::
-     PrimMonad m => PVar (PrimState m) Int -> (Int -> Int) -> m Int
-atomicModifyIntPVar (PVar mba#) f =
-  primitive $ \s# ->
-    case atomicModifyIntArray# mba# 0# (\i# -> unI# (f (I# i#))) s# of
-      (# s'#, i'# #) -> (# s'#, I# i'# #)
-{-# INLINE atomicModifyIntPVar #-}
 
 
 -- | Create a new `PVar` in pinned memory with an initial value in it aligned on the size of

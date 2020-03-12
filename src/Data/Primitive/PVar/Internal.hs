@@ -3,7 +3,7 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UnboxedTuples #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints -fobject-code #-}
 -- |
 -- Module      : Data.Primitive.PVar.Internal
 -- Copyright   : (c) Alexey Kuleshevich 2020
@@ -23,6 +23,9 @@ module Data.Primitive.PVar.Internal
   -- * Atomic operations
   , unI#
   , atomicModifyIntArray#
+  , atomicModifyIntPVar
+  , atomicModifyIntArray_#
+  , atomicModifyIntPVar_
   )
   where
 
@@ -97,10 +100,50 @@ unI# (I# i#) = i#
 atomicModifyIntArray# ::
      MutableByteArray# d -- ^ Array to be mutated
   -> Int# -- ^ Index in number of `Int#` elements into the `MutableByteArray#`
+  -> (Int# -> (# Int#, b #)) -- ^ Function to be applied atomically to the element
+  -> State# d -- ^ Starting state
+  -> (# State# d, b #)
+atomicModifyIntArray# mba# i# f s0# =
+  let go s# o# =
+        case f o# of
+          (# n#, artifact #) ->
+            case casIntArray# mba# i# o# n# s# of
+              (# s'#, o'# #) ->
+                case o# ==# o'# of
+                  0# -> go s# o'#
+                  _ -> seq# artifact s'#
+   in case atomicReadIntArray# mba# i# s0# of
+        (# s'#, o# #) -> go s'# o#
+{-# INLINE atomicModifyIntArray# #-}
+
+
+
+-- | Apply a function to an integer element of a `PVar` atomically. Implies a full memory
+-- barrier.
+--
+-- @since 0.1.0
+atomicModifyIntPVar ::
+     PrimMonad m => PVar (PrimState m) Int -> (Int -> (Int, a)) -> m a
+atomicModifyIntPVar (PVar mba#) f = primitive (atomicModifyIntArray# mba# 0# g)
+  where
+    g i# =
+      case f (I# i#) of
+        (I# o#, a) -> (# o#, a #)
+    {-# INLINE g #-}
+{-# INLINE atomicModifyIntPVar #-}
+
+
+
+
+-- | Using `casIntArray#` perform atomic modification of an integer element in a
+-- `MutableByteArray#`. Implies a full memory barrier.
+atomicModifyIntArray_# ::
+     MutableByteArray# d -- ^ Array to be mutated
+  -> Int# -- ^ Index in number of `Int#` elements into the `MutableByteArray#`
   -> (Int# -> Int#) -- ^ Function to be applied atomically to the element
   -> State# d -- ^ Starting state
   -> (# State# d, Int# #)
-atomicModifyIntArray# mba# i# f s0# =
+atomicModifyIntArray_# mba# i# f s0# =
   let go s# o# =
         case casIntArray# mba# i# o# (f o#) s# of
           (# s'#, o'# #) ->
@@ -109,4 +152,17 @@ atomicModifyIntArray# mba# i# f s0# =
               _ -> (# s'#, o# #)
    in case atomicReadIntArray# mba# i# s0# of
         (# s'#, o# #) -> go s'# o#
-{-# INLINE atomicModifyIntArray# #-}
+{-# INLINE atomicModifyIntArray_# #-}
+
+--TODO: Inspect core and see if this is the same as: `atomicModifyIntPVar pvar (\i -> (f i, i))`
+-- | Apply a function to an integer element of a `PVar` atomically. Returns the old
+-- value. Implies a full memory barrier.
+--
+-- @since 0.1.0
+atomicModifyIntPVar_ ::
+     PrimMonad m => PVar (PrimState m) Int -> (Int -> Int) -> m Int
+atomicModifyIntPVar_ (PVar mba#) f =
+  primitive $ \s# ->
+    case atomicModifyIntArray_# mba# 0# (\i# -> unI# (f (I# i#))) s# of
+      (# s'#, i'# #) -> (# s'#, I# i'# #)
+{-# INLINE atomicModifyIntPVar_ #-}
