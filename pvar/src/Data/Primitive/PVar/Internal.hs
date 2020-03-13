@@ -3,7 +3,7 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UnboxedTuples #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints -fobject-code #-}
+--{-# OPTIONS_GHC -Wno-redundant-constraints -fobject-code #-}
 -- |
 -- Module      : Data.Primitive.PVar.Internal
 -- Copyright   : (c) Alexey Kuleshevich 2020
@@ -142,14 +142,14 @@ atomicModifyIntArray_# ::
   -> Int# -- ^ Index in number of `Int#` elements into the `MutableByteArray#`
   -> (Int# -> Int#) -- ^ Function to be applied atomically to the element
   -> State# d -- ^ Starting state
-  -> (# State# d, Int# #)
+  -> State# d
 atomicModifyIntArray_# mba# i# f s0# =
   let go s# o# =
         case casIntArray# mba# i# o# (f o#) s# of
           (# s'#, o'# #) ->
             case o# ==# o'# of
               0# -> go s# o'#
-              _ -> (# s'#, o# #)
+              _ -> s'#
    in case atomicReadIntArray# mba# i# s0# of
         (# s'#, o# #) -> go s'# o#
 {-# INLINE atomicModifyIntArray_# #-}
@@ -160,9 +160,7 @@ atomicModifyIntArray_# mba# i# f s0# =
 --
 -- @since 0.1.0
 atomicModifyIntPVar_ ::
-     PrimMonad m => PVar (PrimState m) Int -> (Int -> Int) -> m Int
+     PrimMonad m => PVar (PrimState m) Int -> (Int -> Int) -> m ()
 atomicModifyIntPVar_ (PVar mba#) f =
-  primitive $ \s# ->
-    case atomicModifyIntArray_# mba# 0# (\i# -> unI# (f (I# i#))) s# of
-      (# s'#, i'# #) -> (# s'#, I# i'# #)
+  primitive_ (atomicModifyIntArray_# mba# 0# (\i# -> unI# (f (I# i#))))
 {-# INLINE atomicModifyIntPVar_ #-}
