@@ -4,8 +4,12 @@
 module Test.Primitive.PVarSpec (spec) where
 
 import Control.Monad
+import Control.Concurrent.Async
 import Data.GenValidity
 import Data.Int
+import Data.Bits
+import Data.List (partition)
+import Data.Foldable as F
 import Data.Maybe
 import Data.Primitive.ByteArray
 import Data.Primitive.PVar
@@ -18,7 +22,7 @@ import Foreign.Marshal.Alloc
 import qualified Foreign.Storable as Storable
 import Test.Hspec
 import Test.Hspec.QuickCheck
-import Test.QuickCheck
+import Test.QuickCheck hiding ((.&.))
 import Test.QuickCheck.Monadic
 
 forAllIO :: (Show p, Testable t) => Gen p -> (p -> IO t) -> Property
@@ -230,31 +234,138 @@ specStorable gen =
         copyPVarToPtr var ptr
         peek ptr `shouldReturn` a
 
--- TODO: atomic
--- specAtomic ::
---      (Num p, Show p, Eq p, Prim p, Typeable p, Arbitrary p, CoArbitrary p, Function p)
---   => Gen p
---   -> Spec
--- specAtomic gen =
---   describe "Num" $ do
---     propPVarIO "zero" gen $ \_ var -> do
---       zeroPVar var
---       readPVar var `shouldReturn` 0
+specAtomic :: Spec
+specAtomic = do
+  let gen = genValid :: Gen Int
+  describe "Atomic (basic)" $ do
+    describe "Basic" $ do
+      propPVarIO "atomicAddIntPVar" gen $ \x var ->
+        return $
+        forAllIO gen $ \y -> do
+          x' <- atomicAddIntPVar var y
+          x' `shouldBe` x
+          atomicReadIntPVar var `shouldReturn` (x + y)
+      propPVarIO "atomicSubIntPVar" gen $ \x var ->
+        return $
+        forAllIO gen $ \y -> do
+          x' <- atomicSubIntPVar var y
+          x' `shouldBe` x
+          atomicReadIntPVar var `shouldReturn` (x - y)
+      propPVarIO "atomicAndIntPVar" gen $ \x var ->
+        return $
+        forAllIO gen $ \y -> do
+          x' <- atomicAndIntPVar var y
+          x' `shouldBe` x
+          atomicReadIntPVar var `shouldReturn` (x .&. y)
+      propPVarIO "atomicNandIntPVar" gen $ \x var ->
+        return $
+        forAllIO gen $ \y -> do
+          x' <- atomicNandIntPVar var y
+          x' `shouldBe` x
+          atomicReadIntPVar var `shouldReturn` complement (x .&. y)
+      propPVarIO "atomicOrIntPVar" gen $ \x var ->
+        return $
+        forAllIO gen $ \y -> do
+          x' <- atomicOrIntPVar var y
+          x' `shouldBe` x
+          atomicReadIntPVar var `shouldReturn` (x .|. y)
+      propPVarIO "atomicXorIntPVar" gen $ \x var ->
+        return $
+        forAllIO gen $ \y -> do
+          x' <- atomicXorIntPVar var y
+          x' `shouldBe` x
+          atomicReadIntPVar var `shouldReturn` (x `xor` y)
+      propPVarIO "atomicNotIntPVar" gen $ \x var -> do
+        x' <- atomicNotIntPVar var
+        x' `shouldBe` x
+        atomicReadIntPVar var `shouldReturn` complement x
+    describe "Concurrent" $ do
+      propPVarIO "atomicAndIntPVar" gen $ \x var ->
+        return $
+        forAllIO (genListOf gen) $ \xs -> do
+          xs' <- mapConcurrently (atomicAndIntPVar var) xs
+          x' <- atomicReadIntPVar var
+          F.foldl' (.&.) x' xs' `shouldBe` F.foldl' (.&.) x xs
+      propPVarIO "atomicOrIntPVar" gen $ \x var ->
+        return $
+        forAllIO (genListOf gen) $ \xs -> do
+          xs' <- mapConcurrently (atomicOrIntPVar var) xs
+          x' <- atomicReadIntPVar var
+          F.foldl' (.|.) x' xs' `shouldBe` F.foldl' (.|.) x xs
+    describe "CAS-Concurrent" $ do
+      propPVarIO "casIntPVar" gen $ \x var ->
+        return $
+        forAllIO ((,) <$> gen <*> gen) $ \(y, z) -> do
+          x' <- casIntPVar var x y
+          x' `shouldBe` x
+          y' <- atomicReadIntPVar var
+          atomicWriteIntPVar var z
+          y' `shouldBe` y
+          z' <- atomicReadIntPVar var
+          z' `shouldBe` z
+      casProp_ gen "atomicAddIntPVar" (+) atomicAddIntPVar
+      casProp_ gen "atomicSubIntPVar" subtract atomicSubIntPVar
+      casProp gen "atomicAndIntPVar" (.&.) atomicAndIntPVar
+      casProp gen "atomicOrIntPVar" (.|.) atomicOrIntPVar
+      casProp_ gen "atomicXorIntPVar" xor atomicXorIntPVar
+      propPVarIO "atomicNotIntPVar" gen $ \x xvar ->
+        return $
+        forAllIO arbitrary $ \(Positive n) -> do
+          xs' <- replicateConcurrently n (atomicNotIntPVar xvar)
+          x' <- atomicReadIntPVar xvar
+          yvar <- newPVar x
+          ys' <-
+            replicateConcurrently
+              n
+              (atomicModifyIntPVar yvar (\y -> (complement y, y)))
+          y' <- atomicReadIntPVar yvar
+          x' `shouldBe` y'
+          -- binary negation of N times results in two values, both of which happen N/2
+          -- times
+          let sxs@(l, r) = partition (== x) (x' : xs')
+              lenr = length r
+              sys = partition (== x) (y' : ys')
+          sxs `shouldBe` sys
+          length l `shouldSatisfy` (\len -> len == lenr || len == lenr + 1)
+  where
+    casProp_ gen name f af =
+      propPVarIO name gen $ \x xvar ->
+        return $
+        forAllIO (genListOf gen) $ \xs -> do
+          mapConcurrently_ (af xvar) xs
+          x' <- atomicReadIntPVar xvar
+          yvar <- newPVar x
+          mapConcurrently_ (\y' -> atomicModifyIntPVar_ yvar (f y')) xs
+          y' <- atomicReadIntPVar yvar
+          x' `shouldBe` y'
+    casProp gen name f af =
+      propPVarIO name gen $ \x xvar ->
+        return $
+        forAllIO (genListOf gen) $ \xs -> do
+          xs' <- mapConcurrently (af xvar) xs
+          x' <- atomicReadIntPVar xvar
+          yvar <- newPVar x
+          ys' <-
+            mapConcurrently
+              (\y' -> atomicModifyIntPVar yvar (\y -> (f y y', y)))
+              xs
+          y' <- atomicReadIntPVar yvar
+          x' `shouldBe` y'
+          F.foldl' f x' xs' `shouldBe` F.foldl' f x xs
 
 
 spec :: Spec
 spec = do
-  let extraSpec gen = specStorable gen
-  specPrim 0 (genValid :: Gen Int) extraSpec -- >> specAtomic
-  specPrim 0 (genValid :: Gen Int8) extraSpec
-  specPrim 0 (genValid :: Gen Int16) extraSpec
-  specPrim 0 (genValid :: Gen Int32) extraSpec
-  specPrim 0 (genValid :: Gen Int64) extraSpec
-  specPrim 0 (genValid :: Gen Word) extraSpec
-  specPrim 0 (genValid :: Gen Word8) extraSpec
-  specPrim 0 (genValid :: Gen Word16) extraSpec
-  specPrim 0 (genValid :: Gen Word32) extraSpec
-  specPrim 0 (genValid :: Gen Word64) extraSpec
-  specPrim '\0' (genValid :: Gen Char) extraSpec
-  specPrim 0 (arbitrary :: Gen Float) extraSpec
-  specPrim 0 (arbitrary :: Gen Double) extraSpec
+  specPrim 0 (genValid :: Gen Int) (\gen -> specStorable gen >> specAtomic)
+  specPrim 0 (genValid :: Gen Int8) specStorable
+  specPrim 0 (genValid :: Gen Int16) specStorable
+  specPrim 0 (genValid :: Gen Int32) specStorable
+  specPrim 0 (genValid :: Gen Int64) specStorable
+  specPrim 0 (genValid :: Gen Word) specStorable
+  specPrim 0 (genValid :: Gen Word8) specStorable
+  specPrim 0 (genValid :: Gen Word16) specStorable
+  specPrim 0 (genValid :: Gen Word32) specStorable
+  specPrim 0 (genValid :: Gen Word64) specStorable
+  specPrim '\0' (genValid :: Gen Char) specStorable
+  specPrim 0 (arbitrary :: Gen Float) specStorable
+  specPrim 0 (arbitrary :: Gen Double) specStorable

@@ -57,6 +57,7 @@ module Data.Primitive.PVar
   , atomicNandIntPVar
   , atomicOrIntPVar
   , atomicXorIntPVar
+  , atomicNotIntPVar
   -- ** Re-exports
   , Prim
   , PrimMonad(PrimState)
@@ -205,6 +206,8 @@ swapPVars_ pvar1 pvar2 = void $ swapPVars pvar1 pvar2
 
 -- | Create a new `PVar` in pinned memory with an initial value in it aligned on the size of
 -- an `Int`. Implies a full memory barrier.
+--
+-- @since 0.1.0
 atomicReadIntPVar :: PrimMonad m => PVar (PrimState m) Int -> m Int
 atomicReadIntPVar (PVar mba#) =
   primitive $ \s# ->
@@ -213,6 +216,8 @@ atomicReadIntPVar (PVar mba#) =
 {-# INLINE atomicReadIntPVar #-}
 
 -- | Write a value into an `PVar` atomically. Implies a full memory barrier.
+--
+-- @since 0.1.0
 atomicWriteIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m ()
 atomicWriteIntPVar (PVar mba#) a = primitive_ (atomicWriteIntArray# mba# 0# (unI# a))
 {-# INLINE atomicWriteIntPVar #-}
@@ -220,6 +225,8 @@ atomicWriteIntPVar (PVar mba#) a = primitive_ (atomicWriteIntArray# mba# 0# (unI
 
 -- | Compare and swap. This is a function that is used to implement `modifyIntPVar`. Implies a
 -- full memory barrier.
+--
+-- @since 0.1.0
 casIntPVar ::
      PrimMonad m
   => PVar (PrimState m) Int -- ^ Variable to mutate
@@ -234,8 +241,10 @@ casIntPVar (PVar mba#) old new =
 
 
 
--- | Add two numbers, corresponds to @`+`@ done atomically. Implies a full memory
--- barrier. Infix version: `!+`.
+-- | Add two numbers, corresponds to @`+`@ done atomically. Returns the previous value of
+-- the mutable variable. Implies a full memory barrier.
+--
+-- @since 0.1.0
 atomicAddIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m Int
 atomicAddIntPVar (PVar mba#) a =
   primitive $ \s# ->
@@ -243,8 +252,10 @@ atomicAddIntPVar (PVar mba#) a =
       (# s'#, p# #) -> (# s'#, I# p# #)
 {-# INLINE atomicAddIntPVar #-}
 
--- | Subtract two numbers, corresponds to @`subtract`@ done atomically. Implies a full
--- memory barrier. Infix version: `!-`
+-- | Subtract two numbers, corresponds to @`subtract`@ done atomically. Returns the
+-- previous value of the mutable variable. Implies a full memory barrier.
+--
+-- @since 0.1.0
 atomicSubIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m Int
 atomicSubIntPVar (PVar mba#) a =
   primitive $ \s# ->
@@ -253,8 +264,10 @@ atomicSubIntPVar (PVar mba#) a =
 {-# INLINE atomicSubIntPVar #-}
 
 
--- | Binary conjuction (AND), corresponds to @`and`@ done atomically. Implies a full memory
--- barrier. Infix version: `!&`
+-- | Binary conjuction (AND), corresponds to @`and`@ done atomically. Returns the previous
+-- value of the mutable variable. Implies a full memory barrier.
+--
+-- @since 0.1.0
 atomicAndIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m Int
 atomicAndIntPVar (PVar mba#) a =
   primitive $ \s# ->
@@ -263,8 +276,11 @@ atomicAndIntPVar (PVar mba#) a =
 {-# INLINE atomicAndIntPVar #-}
 
 
--- | Binary negation of conjuction (Not AND), corresponds to @\\x y -> `complement` (x `and`
--- y)@ done atomically. Implies a full memory barrier. Infix version: `!~&`
+-- | Binary negation of conjuction (Not AND), corresponds to @\\x y -> `complement` (x
+-- `and` y)@ done atomically. Returns the previous value of the mutable variable. Implies
+-- a full memory barrier.
+--
+-- @since 0.1.0
 atomicNandIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m Int
 atomicNandIntPVar (PVar mba#) a =
   primitive $ \s# ->
@@ -273,8 +289,10 @@ atomicNandIntPVar (PVar mba#) a =
 {-# INLINE atomicNandIntPVar #-}
 
 
--- | Binary disjunction (OR), corresponds to `or` done atomically. Implies a full memory
--- barrier. Infix version: `!|`
+-- | Binary disjunction (OR), corresponds to `or` done atomically. Returns the previous
+-- value of the mutable variable. Implies a full memory barrier.
+--
+-- @since 0.1.0
 atomicOrIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m Int
 atomicOrIntPVar (PVar mba#) a =
   primitive $ \s# ->
@@ -283,8 +301,10 @@ atomicOrIntPVar (PVar mba#) a =
 {-# INLINE atomicOrIntPVar #-}
 
 
--- | Binary exclusive disjunction (XOR), corresponds to `xor` done atomically. Implies a
--- full memory barrier. Infix version: `!^`
+-- | Binary exclusive disjunction (XOR), corresponds to `xor` done atomically. Returns the
+-- previous value of the mutable variable. Implies a full memory barrier.
+--
+-- @since 0.1.0
 atomicXorIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m Int
 atomicXorIntPVar (PVar mba#) a =
   primitive $ \s# ->
@@ -293,8 +313,10 @@ atomicXorIntPVar (PVar mba#) a =
 {-# INLINE atomicXorIntPVar #-}
 
 
--- | Binary negation (NOT), corresponds to ones' `complement` done atomically. Implies a full
--- memory barrier. Infix version: `!~`
+-- | Binary negation (NOT), corresponds to ones' `complement` done atomically. Returns the
+-- previous value of the mutable variable. Implies a full memory barrier.
+--
+-- @since 0.1.0
 atomicNotIntPVar :: PrimMonad m => PVar (PrimState m) Int -> m Int
 atomicNotIntPVar (PVar mba#) =
   primitive $ \s# ->

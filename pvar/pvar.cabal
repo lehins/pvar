@@ -36,6 +36,7 @@ test-suite tests
   hs-source-dirs: tests
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends: base >=4.7 && <5
+               , async
                , pvar
                , primitive
                , hspec
