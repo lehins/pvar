@@ -10,11 +10,12 @@
 -- Portability : non-portable
 --
 module Data.Primitive.PVar
-  ( -- | It has significantly better performance
-    -- characterisitcs over `Data.IORef.IORef`, `Data.STRef.STRef` and
-    -- `Data.Primtive.MutVar.MutVar`. This is because value is mutated directly in memory
-    -- instead of following an extra pointer. Besides performance another consequence of this
-    -- is that values are always evaluated to normal form when being written into the `Pvar`
+  ( -- | `PVar` has significantly better performance characterisitcs over
+    -- `Data.IORef.IORef`, `Data.STRef.STRef` and `Data.Primtive.MutVar.MutVar`. This is
+    -- because value is mutated directly in memory instead of following an extra
+    -- pointer. Besides better performance there is another consequence of direct
+    -- mutation, namely that values are always evaluated to normal form when being written
+    -- into a `PVar`
 
   -- * Primitive variable
     PVar
@@ -23,12 +24,12 @@ module Data.Primitive.PVar
   -- * Generic Operations
   , readPVar
   , writePVar
-  , modifyPVar
   , modifyPVar_
-  , modifyPVarM
+  , modifyPVar
   , modifyPVarM_
-  , swapPVars
+  , modifyPVarM
   , swapPVars_
+  , swapPVars
   , copyPVar
   , sizeOfPVar
   , alignmentPVar
@@ -78,19 +79,19 @@ import qualified Foreign.Storable as S
 import GHC.Exts
 import GHC.ForeignPtr
 
--- | Run an ST action on a mutable PVar variable.
+-- | Run an `ST` action on a mutable variable.
 --
 -- @since 0.1.0
 withPVarST ::
      Prim p
   => p -- ^ Initial value assigned to the mutable variable
   -> (forall s. PVar s p -> ST s a) -- ^ Action to run
-  -> a -- ^ Reslt produced by the ST action
+  -> a -- ^ Result produced by the `ST` action
 withPVarST x st = runST (newPVar x >>= st)
 {-# INLINE withPVarST #-}
 
--- | Apply an action to the Ptr that references the mutable variable, but only if it is
--- backed by pinned memory, cause otherwise it would not be safe.
+-- | Apply an action to the `Ptr` that references the mutable variable, but only if it is
+-- backed by pinned memory, cause otherwise it would be unsafe.
 --
 -- @since 0.1.0
 withPtrPVar :: (PrimMonad m, Prim a) => PVar s a -> (Ptr a -> m b) -> m (Maybe b)
@@ -107,9 +108,11 @@ withPtrPVar pvar f =
 --
 -- @since 0.1.0
 toForeignPtrPVar :: PVar RealWorld a -> Maybe (ForeignPtr a)
-toForeignPtrPVar pvar@(PVar mba#) =
-  fmap (\(Ptr addr#) -> ForeignPtr addr# (PlainPtr mba#)) (toPtrPVar pvar)
+toForeignPtrPVar pvar
+  | isPinnedPVar pvar = Just $ unsafeToForeignPtrPVar pvar
+  | otherwise = Nothing
 {-# INLINE toForeignPtrPVar #-}
+
 
 -- | Copy contents of one mutable variable `PVar` into another
 --

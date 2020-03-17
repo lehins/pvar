@@ -37,13 +37,14 @@ import GHC.Exts
 import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_, touch)
 import Data.Primitive.Types
 import qualified Foreign.Storable as S
+import Control.DeepSeq
 
 -- | Mutable variable with primitive value.
 --
 -- @since 0.1.0
 data PVar s a = PVar (MutableByteArray# s)
 
--- | @`S.poke`/`S.peek`@ will result in a new copy of a `PVar`
+-- | @`S.poke`+`S.peek`@ will result in a new copy of a `PVar`
 instance Prim a => S.Storable (PVar RealWorld a) where
   sizeOf _ = sizeOf (undefined :: a)
   {-# INLINE sizeOf #-}
@@ -58,7 +59,11 @@ instance Prim a => S.Storable (PVar RealWorld a) where
     primitive_ (writeOffAddr# addr# i# a)
   {-# INLINE pokeElemOff #-}
 
--- | Create a mutable variable in unpinned memory (GC can move it) with an initial
+-- | Values are already written into `PVar` in NF, this instance is trivial.
+instance NFData (PVar s a) where
+  rnf (PVar _) = ()
+
+-- | Create a mutable variable in unpinned memory (i.e. GC can move it) with an initial
 -- value. This is a prefered way to create a mutable variable, since it will not
 -- contribute to memory fragmentation. For pinned memory versions see `newPinnedPVar` and
 -- `newAlignedPinnedPVar`
@@ -121,15 +126,16 @@ alignmentPVar# _ = alignment# (undefined :: a)
 {-# INLINE alignmentPVar# #-}
 
 
--- | Size in bytes of a value stored inside variable. Mutable varibale is neither accessed
--- nor evaluated.
+-- | Size in bytes of a value stored inside the mutable variable. `PVar` itself is neither
+-- accessed nor evaluated.
 --
 -- @since 0.1.0
 sizeOfPVar :: Prim a => PVar s a -> Int
 sizeOfPVar pvar = I# (sizeOfPVar# pvar)
 {-# INLINE sizeOfPVar #-}
 
--- | Alignment in bytes of the value stored inside the variable
+-- | Alignment in bytes of the value stored inside of the mutable variable. `PVar` itself is
+-- neither accessed nor evaluated.
 --
 -- @since 0.1.0
 alignmentPVar :: Prim a => PVar s a -> Int

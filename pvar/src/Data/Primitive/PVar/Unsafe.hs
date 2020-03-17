@@ -13,6 +13,7 @@ module Data.Primitive.PVar.Unsafe
   ( PVar(..)
   , toPtrPVar
   , unsafeToPtrPVar
+  , unsafeToForeignPtrPVar
   , zeroPVar
   -- * Unpacked opartions
   , sizeOfPVar#
@@ -47,6 +48,15 @@ import Data.Typeable
 unsafeToPtrPVar :: PVar s a -> Ptr a
 unsafeToPtrPVar (PVar mba#) = Ptr (byteArrayContents# (unsafeCoerce# mba#))
 {-# INLINE unsafeToPtrPVar #-}
+
+-- | Convert `PVar` into a `ForeignPtr`, very unsafe if not backed by pinned memory.
+--
+-- @since 0.1.0
+unsafeToForeignPtrPVar :: PVar RealWorld a -> ForeignPtr a
+unsafeToForeignPtrPVar pvar@(PVar mba#) =
+  case unsafeToPtrPVar pvar of
+    Ptr addr# -> ForeignPtr addr# (PlainPtr mba#)
+{-# INLINE unsafeToForeignPtrPVar #-}
 
 
 -- | Extract the address to the mutable variable, but only if it is backed by pinned

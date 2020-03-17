@@ -5,6 +5,7 @@ module Test.Primitive.PVarSpec (spec) where
 
 import Control.Monad
 import Control.Concurrent.Async
+import Control.DeepSeq
 import Data.GenValidity
 import Data.Int
 import Data.Bits
@@ -90,7 +91,8 @@ specPrim ::
   -> Spec
 specPrim defZero gen extraSpec =
   describe ("PVar s " ++ showsType gen "") $ do
-    propPVarIO "readPVar" gen $ \v pvar -> readPVar pvar `shouldReturn` v
+    propPVarIO "readPVar" gen $ \v pvar -- deepseq is used for coverage only
+     -> pvar `deepseq` readPVar pvar `shouldReturn` v
     propPVarIO "writePVar/readPVar" gen $ \_ pvar ->
       return $
       forAll gen $ \v -> do
@@ -99,7 +101,7 @@ specPrim defZero gen extraSpec =
     prop "withPVarST" $
       forAll gen $ \a ->
         forAll gen $ \b ->
-          withPVarST a $ \ var -> do
+          withPVarST a $ \var -> do
             a' <- readPVar var
             writePVar var b
             b' <- readPVar var
