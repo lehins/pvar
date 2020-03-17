@@ -86,8 +86,8 @@ specPrim ::
   -> Spec
 specPrim defZero gen extraSpec =
   describe ("PVar s " ++ showsType gen "") $ do
-    propPVarIO "read" gen $ \v pvar -> readPVar pvar `shouldReturn` v
-    propPVarIO "write/read" gen $ \_ pvar ->
+    propPVarIO "readPVar" gen $ \v pvar -> readPVar pvar `shouldReturn` v
+    propPVarIO "writePVar/readPVar" gen $ \_ pvar ->
       return $
       forAll gen $ \v -> do
         writePVar pvar v
@@ -98,61 +98,77 @@ specPrim defZero gen extraSpec =
     propPVarIO "newAlignedPinnedPVar" gen $ \a var -> do
       pinnedVar <- newAlignedPinnedPVar a
       (===) <$> readPVar var <*> readPVar pinnedVar
-    propPVarIO "modify" gen $ \a pvar ->
+    propPVarIO "modifyPVar" gen $ \a pvar ->
       return $
       forAll arbitrary $ \f -> do
         modifyPVar pvar (applyFun f) `shouldReturn` a
         readPVar pvar `shouldReturn` applyFun f a
-    propPVarIO "modify_" gen $ \a pvar ->
+    propPVarIO "modifyPVar_" gen $ \a pvar ->
       return $
       forAll arbitrary $ \f -> do
         modifyPVar_ pvar (applyFun f)
         readPVar pvar `shouldReturn` applyFun f a
-    -- propPVarIO "modifyM" gen $ \a pvar ->
-    --   return $
-    --   forAll arbitrary $ \(NonEmptyList xs) -> do
-    --     genM <- MWC.initialize $ V.fromList xs
-    --     modifyPVar pvar $ \a' -> do
-    --       a` shouldBe` a
-    --       applyFun f) `shouldReturn` a
-    --     readPVar pvar `shouldReturn` applyFun f a
-    propPVarIO "swap" gen $ \a avar ->
+    propPVarIO "modifyPVarM" gen $ \a pvar ->
+      return $
+      forAllIO arbitrary $ \f -> do
+        a' <-
+          modifyPVarM pvar $ \a' -> do
+            a' `shouldBe` a
+            pure $ applyFun f a'
+        a' `shouldBe` a
+        readPVar pvar `shouldReturn` applyFun f a
+    propPVarIO "modifyPVarM_" gen $ \a pvar ->
+      return $
+      forAllIO arbitrary $ \f -> do
+        modifyPVarM_ pvar $ \a' -> do
+            a' `shouldBe` a
+            pure $ applyFun f a'
+        readPVar pvar `shouldReturn` applyFun f a
+    propPVarIO "swapPVars" gen $ \a avar ->
       return $
       forAllPVarIO gen $ \b bvar -> do
         swapPVars avar bvar `shouldReturn` (a, b)
         readPVar avar `shouldReturn` b
         readPVar bvar `shouldReturn` a
-    propPVarIO "swap_" gen $ \a avar ->
+    propPVarIO "swapPVars_" gen $ \a avar ->
       return $
       forAllPVarIO gen $ \b bvar -> do
         swapPVars_ avar bvar
         readPVar avar `shouldReturn` b
         readPVar bvar `shouldReturn` a
-    propPVarIO "copy" gen $ \a avar ->
+    propPVarIO "copyPVar" gen $ \a avar ->
       return $
       forAllPVarIO gen $ \_ bvar -> do
         copyPVar avar bvar
         readPVar bvar `shouldReturn` a
-    propPVarST "sizeOf" gen $ \a avar -> pure (sizeOfPVar avar === sizeOf a)
+    propPVarST "sizeOfPVar" gen $ \a avar -> pure (sizeOfPVar avar === sizeOf a)
+    propPVarST "alignmentPVar" gen $ \a avar ->
+      pure (alignmentPVar avar === alignment a)
     describe "Unsafe" $ do
-      propPVarIO "copyPVarToMutableByteArray" gen $ \ a var ->
+      propPVarIO "copyPVarToMutableByteArray" gen $ \a var ->
         return $
-        forAll (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) -> monadicIO $ run $ do
-          mba <- unsafeThawByteArray ba
-          copyPVarToMutableByteArray var mba i
-          readByteArray mba i `shouldReturn` a
-          (===) <$> readByteArray mba i <*> readPVar var
-      propPVarIO "copyFromByteArrayPVar" gen $ \ _ var ->
+        forAll (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) ->
+          monadicIO $
+          run $ do
+            mba <- unsafeThawByteArray ba
+            copyPVarToMutableByteArray var mba i
+            readByteArray mba i `shouldReturn` a
+            (===) <$> readByteArray mba i <*> readPVar var
+      propPVarIO "copyFromByteArrayPVar" gen $ \_ var ->
         return $
-        forAll (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) -> monadicIO $ run $ do
-          copyFromByteArrayPVar ba i var
-          readPVar var `shouldReturn` indexByteArray ba i
-      propPVarIO "copyFromMutableByteArrayPVar" gen $ \ _ var ->
+        forAll (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) ->
+          monadicIO $
+          run $ do
+            copyFromByteArrayPVar ba i var
+            readPVar var `shouldReturn` indexByteArray ba i
+      propPVarIO "copyFromMutableByteArrayPVar" gen $ \_ var ->
         return $
-        forAll (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) -> monadicIO $ run $ do
-          mba <- unsafeThawByteArray ba
-          copyFromMutableByteArrayPVar mba i var
-          readPVar var `shouldReturn` indexByteArray ba i
+        forAll (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) ->
+          monadicIO $
+          run $ do
+            mba <- unsafeThawByteArray ba
+            copyFromMutableByteArrayPVar mba i var
+            readPVar var `shouldReturn` indexByteArray ba i
       propPVarST "sizeOf" gen $ \a var -> pure (toPtrPVar var === Nothing)
     describe "Num" $ do
       propPVarIO "zero" gen $ \_ var -> do
@@ -201,6 +217,10 @@ specStorable gen =
         readPVar var' `shouldReturn` a
         Storable.sizeOf var `shouldBe` sizeOfPVar var
         Storable.alignment var `shouldBe` alignmentPVar var
+    propPVarIO "copyPVarToPtr" gen $ \a var ->
+      alloca $ \ptr -> do
+        copyPVarToPtr var ptr
+        Storable.peek ptr `shouldReturn` a
 
 -- TODO: atomic
 -- specAtomic ::

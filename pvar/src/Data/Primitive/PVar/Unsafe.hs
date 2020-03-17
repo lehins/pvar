@@ -57,7 +57,7 @@ unsafeToPtrPVar (PVar mba#) = Ptr (byteArrayContents# (unsafeCoerce# mba#))
 -- @since 0.1.0
 toPtrPVar :: PVar s a -> Maybe (Ptr a)
 toPtrPVar pvar@(PVar mba#)
-  | isTrue# (isMutableByteArrayPinned# mba#) = Just $ unsafeToPtrPVar pvar
+  | isPinnedPVar pvar = Just $ unsafeToPtrPVar pvar
   | otherwise = Nothing
 {-# INLINE toPtrPVar #-}
 

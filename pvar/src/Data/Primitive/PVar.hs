@@ -63,24 +63,23 @@ module Data.Primitive.PVar
   , RealWorld
   , ST
   , runST
+  , S.Storable(..)
   ) where
 
 import Control.Monad (void)
+import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_,
+                                touch)
 import Control.Monad.ST (ST, runST)
-import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_, touch)
 import Data.Primitive.PVar.Internal
 import Data.Primitive.PVar.Unsafe
 import Data.Primitive.Types
+import qualified Foreign.Storable as S
 import GHC.Exts
 import GHC.ForeignPtr
 
-
--- | Check if `PVar` is backed by pinned memory or not
-isPinnedPVar :: PVar s a -> Bool
-isPinnedPVar (PVar mba#) = isTrue# (isMutableByteArrayPinned# mba#)
-{-# INLINE isPinnedPVar #-}
-
 -- | Run an ST action on a mutable PVar variable.
+--
+-- @since 0.1.0
 withPVarST ::
      Prim p
   => p -- ^ Initial value assigned to the mutable variable
@@ -91,6 +90,8 @@ withPVarST x st = runST (newPVar x >>= st)
 
 -- | Apply an action to the Ptr that references the mutable variable, but only if it is
 -- backed by pinned memory, cause otherwise it would not be safe.
+--
+-- @since 0.1.0
 withPtrPVar :: (PrimMonad m, Prim a) => PVar s a -> (Ptr a -> m b) -> m (Maybe b)
 withPtrPVar pvar f =
   case toPtrPVar pvar of
@@ -102,12 +103,16 @@ withPtrPVar pvar f =
 {-# INLINE withPtrPVar #-}
 
 -- | Convert `PVar` into a `ForeignPtr`, but only if it is backed by pinned memory.
+--
+-- @since 0.1.0
 toForeignPtrPVar :: PVar RealWorld a -> Maybe (ForeignPtr a)
 toForeignPtrPVar pvar@(PVar mba#) =
   fmap (\(Ptr addr#) -> ForeignPtr addr# (PlainPtr mba#)) (toPtrPVar pvar)
 {-# INLINE toForeignPtrPVar #-}
 
 -- | Copy contents of one mutable variable `PVar` into another
+--
+-- @since 0.1.0
 copyPVar ::
      (PrimMonad m, Prim a)
   => PVar (PrimState m) a -- ^ Source variable
@@ -118,25 +123,30 @@ copyPVar pvar@(PVar mbas#) (PVar mbad#) =
 {-# INLINE copyPVar #-}
 
 -- | Copy contents of a mutable variable `PVar` into a pointer `Ptr`
+--
+-- @since 0.1.0
 copyPVarToPtr :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> Ptr a -> m ()
 copyPVarToPtr pvar@(PVar mbas#) (Ptr addr#) =
   primitive_ (copyMutableByteArrayToAddr# mbas# 0# addr# (sizeOfPVar# pvar))
 {-# INLINE copyPVarToPtr #-}
 
 -- | Apply a pure function to the contents of a mutable variable. Returns the old value.
+--
+-- @since 0.1.0
 modifyPVar :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> (a -> a) -> m a
-modifyPVar pvar f = do
-  a <- readPVar pvar
-  writePVar pvar (f a)
-  return a
+modifyPVar pvar f = modifyPVarM pvar (return . f)
 {-# INLINE modifyPVar #-}
 
 -- | Apply a pure function to the contents of a mutable variable.
+--
+-- @since 0.1.0
 modifyPVar_ :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> (a -> a) -> m ()
-modifyPVar_ pvar f = readPVar pvar >>= writePVar pvar . f
+modifyPVar_ pvar f = modifyPVarM_ pvar (return . f)
 {-# INLINE modifyPVar_ #-}
 
 -- | Apply a monadic action to the contents of a mutable variable. Returns the old value.
+--
+-- @since 0.1.0
 modifyPVarM :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> (a -> m a) -> m a
 modifyPVarM pvar f = do
   a <- readPVar pvar
@@ -146,11 +156,15 @@ modifyPVarM pvar f = do
 {-# INLINE modifyPVarM #-}
 
 -- | Apply a monadic action to the contents of a mutable variable.
+--
+-- @since 0.1.0
 modifyPVarM_ :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> (a -> m a) -> m ()
 modifyPVarM_ pvar f = readPVar pvar >>= f >>= writePVar pvar
 {-# INLINE modifyPVarM_ #-}
 
 -- | Swap contents of two mutable variables. Returns their old values.
+--
+-- @since 0.1.0
 swapPVars :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> PVar (PrimState m) a -> m (a, a)
 swapPVars pvar1 pvar2 = do
   a1 <- readPVar pvar1
@@ -160,31 +174,33 @@ swapPVars pvar1 pvar2 = do
 {-# INLINE swapPVars #-}
 
 -- | Swap contents of two mutable variables.
+--
+-- @since 0.1.0
 swapPVars_ :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> PVar (PrimState m) a -> m ()
 swapPVars_ pvar1 pvar2 = void $ swapPVars pvar1 pvar2
 {-# INLINE swapPVars_ #-}
 
+-- TODO: Come up with a concrete interface for numerics
+-- (=+) :: (PrimMonad m, Prim a, Num a) => PVar (PrimState m) a -> a -> m ()
+-- (=+) pvar a = modifyPVar_ pvar (+ a)
+-- {-# INLINE (=+) #-}
 
-(=+) :: (PrimMonad m, Prim a, Num a) => PVar (PrimState m) a -> a -> m ()
-(=+) pvar a = modifyPVar_ pvar (+ a)
-{-# INLINE (=+) #-}
+-- (=-) :: (PrimMonad m, Prim a, Num a) => PVar (PrimState m) a -> a -> m ()
+-- (=-) pvar a = modifyPVar_ pvar (subtract a)
+-- {-# INLINE (=-) #-}
 
-(=-) :: (PrimMonad m, Prim a, Num a) => PVar (PrimState m) a -> a -> m ()
-(=-) pvar a = modifyPVar_ pvar (subtract a)
-{-# INLINE (=-) #-}
+-- (=*) :: (PrimMonad m, Prim a, Num a) => PVar (PrimState m) a -> a -> m ()
+-- (=*) pvar a = modifyPVar_ pvar (* a)
+-- {-# INLINE (=*) #-}
 
-(=*) :: (PrimMonad m, Prim a, Num a) => PVar (PrimState m) a -> a -> m ()
-(=*) pvar a = modifyPVar_ pvar (* a)
-{-# INLINE (=*) #-}
+-- (=/) :: (PrimMonad m, Prim a, Fractional a) => PVar (PrimState m) a -> a -> m ()
+-- (=/) pvar a = modifyPVar_ pvar (/ a)
+-- {-# INLINE (=/) #-}
 
-(=/) :: (PrimMonad m, Prim a, Fractional a) => PVar (PrimState m) a -> a -> m ()
-(=/) pvar a = modifyPVar_ pvar (/ a)
-{-# INLINE (=/) #-}
-
--- | C like modulo operator
-(=%) :: (PrimMonad m, Prim a, Integral a) => PVar (PrimState m) a -> a -> m ()
-(=%) pvar a = modifyPVar_ pvar (`mod` a)
-{-# INLINE (=%) #-}
+-- -- | C like modulo operator
+-- (=%) :: (PrimMonad m, Prim a, Integral a) => PVar (PrimState m) a -> a -> m ()
+-- (=%) pvar a = modifyPVar_ pvar (`mod` a)
+-- {-# INLINE (=%) #-}
 
 
 -- | Create a new `PVar` in pinned memory with an initial value in it aligned on the size of

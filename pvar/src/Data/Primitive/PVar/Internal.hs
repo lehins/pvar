@@ -19,6 +19,7 @@ module Data.Primitive.PVar.Internal
   , newAlignedPinnedPVar
   , readPVar
   , writePVar
+  , isPinnedPVar
   , sizeOfPVar
   , sizeOfPVar#
   , alignmentPVar
@@ -42,6 +43,7 @@ import qualified Foreign.Storable as S
 -- @since 0.1.0
 data PVar s a = PVar (MutableByteArray# s)
 
+-- | @`S.poke`/`S.peek`@ will result in a new copy of a `PVar`
 instance Prim a => S.Storable (PVar RealWorld a) where
   sizeOf _ = sizeOf (undefined :: a)
   {-# INLINE sizeOf #-}
@@ -139,6 +141,14 @@ unI# :: Int -> Int#
 unI# (I# i#) = i#
 {-# INLINE unI# #-}
 
+
+
+-- | Check if `PVar` is backed by pinned memory or not
+--
+-- @since 0.1.0
+isPinnedPVar :: PVar s a -> Bool
+isPinnedPVar (PVar mba#) = isTrue# (isMutableByteArrayPinned# mba#)
+{-# INLINE isPinnedPVar #-}
 
 
 -- | Using `casIntArray#` perform atomic modification of an integer element in a
