@@ -31,6 +31,7 @@ module Data.Primitive.PVar
   , swapPVars_
   , copyPVar
   , sizeOfPVar
+  , alignmentPVar
   -- * Pinned memory
   , newPinnedPVar
   , newAlignedPinnedPVar

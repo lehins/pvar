@@ -16,6 +16,7 @@ module Data.Primitive.PVar.Unsafe
   , zeroPVar
   -- * Unpacked opartions
   , sizeOfPVar#
+  , alignmentPVar#
   , setPVar#
   -- ** Atomic operations
   , atomicModifyIntArray#

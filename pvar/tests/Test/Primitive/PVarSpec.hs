@@ -10,10 +10,11 @@ import Data.Maybe
 import Data.Primitive.ByteArray
 import Data.Primitive.PVar
 import Data.Primitive.PVar.Unsafe as Unsafe
-import Data.Primitive.Types (sizeOf)
+import Data.Primitive.Types (sizeOf, alignment)
 import Data.Typeable
 import Data.Word
 import Foreign.ForeignPtr
+import Foreign.Marshal.Alloc
 import qualified Foreign.Storable as Storable
 import Test.Hspec
 import Test.Hspec.QuickCheck
@@ -170,13 +171,13 @@ specStorable gen =
     prop "withPVarPtr (newPinnedPVar)" $
       forAllIO gen $ \a -> do
         var <- newPinnedPVar a
-        fmap fromJust $ withPtrPVar var $ \ptr ->
-          Storable.peek ptr `shouldReturn` a
+        fmap fromJust $
+          withPtrPVar var $ \ptr -> Storable.peek ptr `shouldReturn` a
     prop "withPVarPtr (newAlignedPinnedPVar)" $
       forAllIO gen $ \a -> do
         var <- newAlignedPinnedPVar a
-        fmap fromJust $ withPtrPVar var $ \ptr ->
-          Storable.peek ptr `shouldReturn` a
+        fmap fromJust $
+          withPtrPVar var $ \ptr -> Storable.peek ptr `shouldReturn` a
     propPVarIO "toForeignPtr (newPVar)" gen $ \a var ->
       toForeignPtrPVar var `shouldBe` Nothing
     prop "toForeignPtr (newPinnedPVar)" $
@@ -193,6 +194,13 @@ specStorable gen =
           maybe (error "Expected to get a Just ForeignPtr") pure $
           toForeignPtrPVar var
         withForeignPtr fPtr $ \ptr -> Storable.peek ptr `shouldReturn` a
+    propPVarIO "poke/peek/ (Ptr PVar)" gen $ \a var ->
+      alloca $ \ptr -> do
+        Storable.poke ptr var
+        var' <- Storable.peek ptr
+        readPVar var' `shouldReturn` a
+        Storable.sizeOf var `shouldBe` sizeOfPVar var
+        Storable.alignment var `shouldBe` alignmentPVar var
 
 -- TODO: atomic
 -- specAtomic ::

@@ -21,6 +21,8 @@ module Data.Primitive.PVar.Internal
   , writePVar
   , sizeOfPVar
   , sizeOfPVar#
+  , alignmentPVar
+  , alignmentPVar#
   , unI#
   -- * Atomic operations
   , atomicModifyIntArray#
@@ -78,7 +80,7 @@ newPinnedPVar v =
 {-# INLINE newPinnedPVar #-}
 
 -- | Create a mutable variable in pinned memory with an initial value and aligned
--- according to its `alignment#`
+-- according to its `Data.Primitive.Types.alignment`
 --
 -- @since 0.1.0
 newAlignedPinnedPVar :: (PrimMonad m, Prim a) => a -> m (PVar (PrimState m) a)
@@ -102,12 +104,19 @@ writePVar :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> a -> m ()
 writePVar (PVar mba#) v = primitive_ (writeByteArray# mba# 0# v)
 {-# INLINE writePVar #-}
 
--- | Write a value into a mutable variable
+-- | Get the size of the mutable variable in bytes as an unpacked integer
 --
 -- @since 0.1.0
 sizeOfPVar# :: forall s a. Prim a => PVar s a -> Int#
 sizeOfPVar# _ = sizeOf# (undefined :: a)
 {-# INLINE sizeOfPVar# #-}
+
+-- | Get the alignment of the mutable variable in bytes as an unpacked integer
+--
+-- @since 0.1.0
+alignmentPVar# :: forall s a. Prim a => PVar s a -> Int#
+alignmentPVar# _ = alignment# (undefined :: a)
+{-# INLINE alignmentPVar# #-}
 
 
 -- | Size in bytes of a value stored inside variable. Mutable varibale is neither accessed
@@ -117,6 +126,13 @@ sizeOfPVar# _ = sizeOf# (undefined :: a)
 sizeOfPVar :: Prim a => PVar s a -> Int
 sizeOfPVar pvar = I# (sizeOfPVar# pvar)
 {-# INLINE sizeOfPVar #-}
+
+-- | Alignment in bytes of the value stored inside the variable
+--
+-- @since 0.1.0
+alignmentPVar :: Prim a => PVar s a -> Int
+alignmentPVar pvar = I# (alignmentPVar# pvar)
+{-# INLINE alignmentPVar #-}
 
 
 unI# :: Int -> Int#
