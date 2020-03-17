@@ -92,6 +92,14 @@ specPrim defZero gen extraSpec =
       forAll gen $ \v -> do
         writePVar pvar v
         readPVar pvar `shouldReturn` v
+    prop "withPVarST" $
+      forAll gen $ \a ->
+        forAll gen $ \b ->
+          withPVarST a $ \ var -> do
+            a' <- readPVar var
+            writePVar var b
+            b' <- readPVar var
+            pure (a === a' .&&. b === b')
     propPVarIO "newPinnedPVar" gen $ \a var -> do
       pinnedVar <- newPinnedPVar a
       (===) <$> readPVar var <*> readPVar pinnedVar
@@ -121,8 +129,8 @@ specPrim defZero gen extraSpec =
       return $
       forAllIO arbitrary $ \f -> do
         modifyPVarM_ pvar $ \a' -> do
-            a' `shouldBe` a
-            pure $ applyFun f a'
+          a' `shouldBe` a
+          pure $ applyFun f a'
         readPVar pvar `shouldReturn` applyFun f a
     propPVarIO "swapPVars" gen $ \a avar ->
       return $
@@ -170,14 +178,14 @@ specPrim defZero gen extraSpec =
             copyFromMutableByteArrayPVar mba i var
             readPVar var `shouldReturn` indexByteArray ba i
       propPVarST "sizeOf" gen $ \a var -> pure (toPtrPVar var === Nothing)
-    describe "Num" $ do
-      propPVarIO "zero" gen $ \_ var -> do
+    describe "Reset Memory" $
+      propPVarIO "zeroPVar" gen $ \_ var -> do
         zeroPVar var
         readPVar var `shouldReturn` defZero
     extraSpec gen
 
 specStorable ::
-     (Show p, Eq p, Prim p, Storable.Storable p, Arbitrary p, CoArbitrary p, Function p)
+     (Show p, Eq p, Prim p, Storable p, Arbitrary p, CoArbitrary p, Function p)
   => Gen p
   -> Spec
 specStorable gen =
@@ -188,12 +196,12 @@ specStorable gen =
       forAllIO gen $ \a -> do
         var <- newPinnedPVar a
         fmap fromJust $
-          withPtrPVar var $ \ptr -> Storable.peek ptr `shouldReturn` a
+          withPtrPVar var $ \ptr -> peek ptr `shouldReturn` a
     prop "withPVarPtr (newAlignedPinnedPVar)" $
       forAllIO gen $ \a -> do
         var <- newAlignedPinnedPVar a
         fmap fromJust $
-          withPtrPVar var $ \ptr -> Storable.peek ptr `shouldReturn` a
+          withPtrPVar var $ \ptr -> peek ptr `shouldReturn` a
     propPVarIO "toForeignPtr (newPVar)" gen $ \a var ->
       toForeignPtrPVar var `shouldBe` Nothing
     prop "toForeignPtr (newPinnedPVar)" $
@@ -202,14 +210,14 @@ specStorable gen =
         fPtr <-
           maybe (error "Expected to get a Just ForeignPtr") pure $
           toForeignPtrPVar var
-        withForeignPtr fPtr $ \ptr -> Storable.peek ptr `shouldReturn` a
+        withForeignPtr fPtr $ \ptr -> peek ptr `shouldReturn` a
     prop "toForeignPtr (newAlignedPinnedPVar)" $
       forAllIO gen $ \a -> do
         var <- newAlignedPinnedPVar a
         fPtr <-
           maybe (error "Expected to get a Just ForeignPtr") pure $
           toForeignPtrPVar var
-        withForeignPtr fPtr $ \ptr -> Storable.peek ptr `shouldReturn` a
+        withForeignPtr fPtr $ \ptr -> peek ptr `shouldReturn` a
     propPVarIO "poke/peek/ (Ptr PVar)" gen $ \a var ->
       alloca $ \ptr -> do
         Storable.poke ptr var
@@ -220,7 +228,7 @@ specStorable gen =
     propPVarIO "copyPVarToPtr" gen $ \a var ->
       alloca $ \ptr -> do
         copyPVarToPtr var ptr
-        Storable.peek ptr `shouldReturn` a
+        peek ptr `shouldReturn` a
 
 -- TODO: atomic
 -- specAtomic ::

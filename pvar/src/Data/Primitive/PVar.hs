@@ -63,7 +63,7 @@ module Data.Primitive.PVar
   , RealWorld
   , ST
   , runST
-  , S.Storable(..)
+  , S.Storable(peek, poke)
   ) where
 
 import Control.Monad (void)
