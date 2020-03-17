@@ -3,7 +3,7 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UnboxedTuples #-}
---{-# OPTIONS_GHC -Wno-redundant-constraints -fobject-code #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints -fobject-code #-}
 -- |
 -- Module      : Data.Primitive.PVar.Internal
 -- Copyright   : (c) Alexey Kuleshevich 2020
@@ -19,9 +19,10 @@ module Data.Primitive.PVar.Internal
   , newAlignedPinnedPVar
   , readPVar
   , writePVar
+  , sizeOfPVar
   , sizeOfPVar#
-  -- * Atomic operations
   , unI#
+  -- * Atomic operations
   , atomicModifyIntArray#
   , atomicModifyIntPVar
   , atomicModifyIntArray_#
@@ -34,8 +35,7 @@ import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_, tou
 import Data.Primitive.Types
 import qualified Foreign.Storable as S
 
--- | Mutable variable with primitive value. It has significantly better performance
--- characterisitcs over an `Data.IORef.IORef` or an `Data.STRef.STRef`
+-- | Mutable variable with primitive value.
 --
 -- @since 0.1.0
 data PVar s a = PVar (MutableByteArray# s)
@@ -54,6 +54,12 @@ instance Prim a => S.Storable (PVar RealWorld a) where
     primitive_ (writeOffAddr# addr# i# a)
   {-# INLINE pokeElemOff #-}
 
+-- | Create a mutable variable in unpinned memory (GC can move it) with an initial
+-- value. This is a prefered way to create a mutable variable, since it will not
+-- contribute to memory fragmentation. For pinned memory versions see `newPinnedPVar` and
+-- `newAlignedPinnedPVar`
+--
+-- @since 0.1.0
 newPVar :: (PrimMonad m, Prim a) => a -> m (PVar (PrimState m) a)
 newPVar v =
   primitive $ \s# ->
@@ -61,6 +67,9 @@ newPVar v =
       (# s'#, mba# #) -> (# writeByteArray# mba# 0# v s'#, PVar mba# #)
 {-# INLINE newPVar #-}
 
+-- | Create a mutable variable in pinned memory with an initial value.
+--
+-- @since 0.1.0
 newPinnedPVar :: (PrimMonad m, Prim a) => a -> m (PVar (PrimState m) a)
 newPinnedPVar v =
   primitive $ \s# ->
@@ -68,6 +77,10 @@ newPinnedPVar v =
       (# s'#, mba# #) -> (# writeByteArray# mba# 0# v s'#, PVar mba# #)
 {-# INLINE newPinnedPVar #-}
 
+-- | Create a mutable variable in pinned memory with an initial value and aligned
+-- according to its `alignment#`
+--
+-- @since 0.1.0
 newAlignedPinnedPVar :: (PrimMonad m, Prim a) => a -> m (PVar (PrimState m) a)
 newAlignedPinnedPVar v =
   primitive $ \s# ->
@@ -75,18 +88,35 @@ newAlignedPinnedPVar v =
       (# s'#, mba# #) -> (# writeByteArray# mba# 0# v s'#, PVar mba# #)
 {-# INLINE newAlignedPinnedPVar #-}
 
-
+-- | Read a value from a mutable variable
+--
+-- @since 0.1.0
 readPVar :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> m a
 readPVar (PVar mba#) = primitive (readByteArray# mba# 0#)
 {-# INLINE readPVar #-}
 
+-- | Write a value into a mutable variable
+--
+-- @since 0.1.0
 writePVar :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> a -> m ()
 writePVar (PVar mba#) v = primitive_ (writeByteArray# mba# 0# v)
 {-# INLINE writePVar #-}
 
+-- | Write a value into a mutable variable
+--
+-- @since 0.1.0
 sizeOfPVar# :: forall s a. Prim a => PVar s a -> Int#
 sizeOfPVar# _ = sizeOf# (undefined :: a)
 {-# INLINE sizeOfPVar# #-}
+
+
+-- | Size in bytes of a value stored inside variable. Mutable varibale is neither accessed
+-- nor evaluated.
+--
+-- @since 0.1.0
+sizeOfPVar :: Prim a => PVar s a -> Int
+sizeOfPVar pvar = I# (sizeOfPVar# pvar)
+{-# INLINE sizeOfPVar #-}
 
 
 unI# :: Int -> Int#
@@ -97,6 +127,8 @@ unI# (I# i#) = i#
 
 -- | Using `casIntArray#` perform atomic modification of an integer element in a
 -- `MutableByteArray#`. Implies a full memory barrier.
+--
+-- @since 0.1.0
 atomicModifyIntArray# ::
      MutableByteArray# d -- ^ Array to be mutated
   -> Int# -- ^ Index in number of `Int#` elements into the `MutableByteArray#`
@@ -133,10 +165,10 @@ atomicModifyIntPVar (PVar mba#) f = primitive (atomicModifyIntArray# mba# 0# g)
 {-# INLINE atomicModifyIntPVar #-}
 
 
-
-
--- | Using `casIntArray#` perform atomic modification of an integer element in a
+-- | Uses `casIntArray#` to perform atomic modification of an integer element in a
 -- `MutableByteArray#`. Implies a full memory barrier.
+--
+-- @since 0.1.0
 atomicModifyIntArray_# ::
      MutableByteArray# d -- ^ Array to be mutated
   -> Int# -- ^ Index in number of `Int#` elements into the `MutableByteArray#`
@@ -154,7 +186,7 @@ atomicModifyIntArray_# mba# i# f s0# =
         (# s'#, o# #) -> go s'# o#
 {-# INLINE atomicModifyIntArray_# #-}
 
---TODO: Inspect core and see if this is the same as: `atomicModifyIntPVar pvar (\i -> (f i, i))`
+
 -- | Apply a function to an integer element of a `PVar` atomically. Returns the old
 -- value. Implies a full memory barrier.
 --

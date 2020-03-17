@@ -3,74 +3,111 @@
 
 module Test.Primitive.PVarSpec (spec) where
 
+import Control.Monad
+import Data.GenValidity
+import Data.Int
+import Data.Maybe
+import Data.Primitive.ByteArray
 import Data.Primitive.PVar
+import Data.Primitive.PVar.Unsafe as Unsafe
+import Data.Primitive.Types (sizeOf)
+import Data.Typeable
+import Data.Word
+import Foreign.ForeignPtr
+import qualified Foreign.Storable as Storable
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import Test.QuickCheck.Monadic
-import Data.Typeable
-import Data.Word
-import Data.Int
-import Data.GenValidity
-import Data.Primitive.Types (sizeOf)
 
-forAllST ::
+forAllIO :: (Show p, Testable t) => Gen p -> (p -> IO t) -> Property
+forAllIO g propM = forAll g $ \v -> monadicIO $ run $ propM v
+
+forAllST :: (Show p, Testable t) => Gen p -> (forall s. p -> ST s t) -> Property
+forAllST g propM = forAll g $ \v -> monadicST $ run $ propM v
+
+
+forAllPVarST ::
      (Show p, Prim p, Testable t)
   => Gen p
   -> (forall s. p -> PVar s p -> ST s t)
   -> Property
-forAllST g propM = forAll g $ \v -> monadicST $ run $ newPVar v >>= propM v
+forAllPVarST g propM = forAllST g $ \v -> newPVar v >>= propM v
 
-forAllIO ::
+forAllPVarIO ::
      (Show p, Prim p, Testable t)
   => Gen p
   -> (p -> PVar RealWorld p -> IO t)
   -> Property
-forAllIO g propM = forAll g $ \v -> monadicIO $ run $ newPVar v >>= propM v
+forAllPVarIO g propM = forAllIO g $ \v -> newPVar v >>= propM v
 
-propST ::
+propPVarST ::
      (Show p, Prim p, Testable t)
   => String
   -> Gen p
   -> (forall s. p -> PVar s p -> ST s t)
   -> Spec
-propST name gen action = prop name $ forAllST gen action
+propPVarST name gen action = prop name $ forAllPVarST gen action
 
-propIO ::
+propPVarIO ::
      (Show p, Prim p, Testable t)
   => String
   -> Gen p
   -> (p -> PVar RealWorld p -> IO t)
   -> Spec
-propIO name gen action = prop name $ forAllIO gen action
+propPVarIO name gen action = prop name $ forAllPVarIO gen action
 
-showsType :: Typeable t => proxy t -> ShowS
-showsType = showsTypeRep . typeRep
+-- | Generator for a non empty byte array that holds at least one element of type
+-- @a@. Also contains a valid index in number of elements into the array
+data ByteArrayNonEmpty a =
+  ByteArrayNonEmpty Int ByteArray
+  deriving (Show, Eq)
 
+instance (Arbitrary a, Prim a) => Arbitrary (ByteArrayNonEmpty a) where
+  arbitrary = genByteArrayNonEmpty (arbitrary :: Gen a)
+
+genByteArrayNonEmpty gen = do
+  Positive n <- arbitrary
+  xs <- vectorOf n gen
+  NonNegative i <- arbitrary
+  pure $
+    ByteArrayNonEmpty (i `mod` n) $
+    runST $ do
+      mba <- newByteArray (n * sizeOf (head xs))
+      zipWithM_ (writeByteArray mba) [0 ..] xs
+      unsafeFreezeByteArray mba
 
 specPrim ::
      (Show p, Eq p, Prim p, Typeable p, Arbitrary p, CoArbitrary p, Function p)
-  => Gen p
+  => p -- ^ Zero value
+  -> Gen p
+  -> (Gen p -> Spec)
   -> Spec
-specPrim gen =
+specPrim defZero gen extraSpec =
   describe ("PVar s " ++ showsType gen "") $ do
-    propIO "read" gen $ \v pvar -> readPVar pvar `shouldReturn` v
-    propIO "write/read" gen $ \_ pvar ->
+    propPVarIO "read" gen $ \v pvar -> readPVar pvar `shouldReturn` v
+    propPVarIO "write/read" gen $ \_ pvar ->
       return $
       forAll gen $ \v -> do
         writePVar pvar v
         readPVar pvar `shouldReturn` v
-    propIO "modify" gen $ \a pvar ->
+    propPVarIO "newPinnedPVar" gen $ \a var -> do
+      pinnedVar <- newPinnedPVar a
+      (===) <$> readPVar var <*> readPVar pinnedVar
+    propPVarIO "newAlignedPinnedPVar" gen $ \a var -> do
+      pinnedVar <- newAlignedPinnedPVar a
+      (===) <$> readPVar var <*> readPVar pinnedVar
+    propPVarIO "modify" gen $ \a pvar ->
       return $
       forAll arbitrary $ \f -> do
         modifyPVar pvar (applyFun f) `shouldReturn` a
         readPVar pvar `shouldReturn` applyFun f a
-    propIO "modify_" gen $ \a pvar ->
+    propPVarIO "modify_" gen $ \a pvar ->
       return $
       forAll arbitrary $ \f -> do
         modifyPVar_ pvar (applyFun f)
         readPVar pvar `shouldReturn` applyFun f a
-    -- propIO "modifyM" gen $ \a pvar ->
+    -- propPVarIO "modifyM" gen $ \a pvar ->
     --   return $
     --   forAll arbitrary $ \(NonEmptyList xs) -> do
     --     genM <- MWC.initialize $ V.fromList xs
@@ -78,38 +115,110 @@ specPrim gen =
     --       a` shouldBe` a
     --       applyFun f) `shouldReturn` a
     --     readPVar pvar `shouldReturn` applyFun f a
-    propIO "swap" gen $ \a avar ->
+    propPVarIO "swap" gen $ \a avar ->
       return $
-      forAllIO gen $ \b bvar -> do
+      forAllPVarIO gen $ \b bvar -> do
         swapPVars avar bvar `shouldReturn` (a, b)
         readPVar avar `shouldReturn` b
         readPVar bvar `shouldReturn` a
-    propIO "swap_" gen $ \a avar ->
+    propPVarIO "swap_" gen $ \a avar ->
       return $
-      forAllIO gen $ \b bvar -> do
+      forAllPVarIO gen $ \b bvar -> do
         swapPVars_ avar bvar
         readPVar avar `shouldReturn` b
         readPVar bvar `shouldReturn` a
-    propIO "copy" gen $ \a avar ->
+    propPVarIO "copy" gen $ \a avar ->
       return $
-      forAllIO gen $ \_ bvar -> do
+      forAllPVarIO gen $ \_ bvar -> do
         copyPVar avar bvar
         readPVar bvar `shouldReturn` a
-    propST "sizeOf" gen $ \a avar -> pure (sizeOfPVar avar === sizeOf a)
+    propPVarST "sizeOf" gen $ \a avar -> pure (sizeOfPVar avar === sizeOf a)
+    describe "Unsafe" $ do
+      propPVarIO "copyPVarToMutableByteArray" gen $ \ a var ->
+        return $
+        forAll (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) -> monadicIO $ run $ do
+          mba <- unsafeThawByteArray ba
+          copyPVarToMutableByteArray var mba i
+          readByteArray mba i `shouldReturn` a
+          (===) <$> readByteArray mba i <*> readPVar var
+      propPVarIO "copyFromByteArrayPVar" gen $ \ _ var ->
+        return $
+        forAll (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) -> monadicIO $ run $ do
+          copyFromByteArrayPVar ba i var
+          readPVar var `shouldReturn` indexByteArray ba i
+      propPVarIO "copyFromMutableByteArrayPVar" gen $ \ _ var ->
+        return $
+        forAll (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) -> monadicIO $ run $ do
+          mba <- unsafeThawByteArray ba
+          copyFromMutableByteArrayPVar mba i var
+          readPVar var `shouldReturn` indexByteArray ba i
+      propPVarST "sizeOf" gen $ \a var -> pure (toPtrPVar var === Nothing)
+    describe "Num" $ do
+      propPVarIO "zero" gen $ \_ var -> do
+        zeroPVar var
+        readPVar var `shouldReturn` defZero
+    extraSpec gen
+
+specStorable ::
+     (Show p, Eq p, Prim p, Storable.Storable p, Arbitrary p, CoArbitrary p, Function p)
+  => Gen p
+  -> Spec
+specStorable gen =
+  describe "Storable" $ do
+    propPVarIO "withPVarPtr (newPVar)" gen $ \a var ->
+      withPtrPVar var pure `shouldReturn` Nothing
+    prop "withPVarPtr (newPinnedPVar)" $
+      forAllIO gen $ \a -> do
+        var <- newPinnedPVar a
+        fmap fromJust $ withPtrPVar var $ \ptr ->
+          Storable.peek ptr `shouldReturn` a
+    prop "withPVarPtr (newAlignedPinnedPVar)" $
+      forAllIO gen $ \a -> do
+        var <- newAlignedPinnedPVar a
+        fmap fromJust $ withPtrPVar var $ \ptr ->
+          Storable.peek ptr `shouldReturn` a
+    propPVarIO "toForeignPtr (newPVar)" gen $ \a var ->
+      toForeignPtrPVar var `shouldBe` Nothing
+    prop "toForeignPtr (newPinnedPVar)" $
+      forAllIO gen $ \a -> do
+        var <- newPinnedPVar a
+        fPtr <-
+          maybe (error "Expected to get a Just ForeignPtr") pure $
+          toForeignPtrPVar var
+        withForeignPtr fPtr $ \ptr -> Storable.peek ptr `shouldReturn` a
+    prop "toForeignPtr (newAlignedPinnedPVar)" $
+      forAllIO gen $ \a -> do
+        var <- newAlignedPinnedPVar a
+        fPtr <-
+          maybe (error "Expected to get a Just ForeignPtr") pure $
+          toForeignPtrPVar var
+        withForeignPtr fPtr $ \ptr -> Storable.peek ptr `shouldReturn` a
+
+-- TODO: atomic
+-- specAtomic ::
+--      (Num p, Show p, Eq p, Prim p, Typeable p, Arbitrary p, CoArbitrary p, Function p)
+--   => Gen p
+--   -> Spec
+-- specAtomic gen =
+--   describe "Num" $ do
+--     propPVarIO "zero" gen $ \_ var -> do
+--       zeroPVar var
+--       readPVar var `shouldReturn` 0
 
 
 spec :: Spec
 spec = do
-  specPrim (genValid :: Gen Int)
-  specPrim (genValid :: Gen Int8)
-  specPrim (genValid :: Gen Int16)
-  specPrim (genValid :: Gen Int32)
-  specPrim (genValid :: Gen Int64)
-  specPrim (genValid :: Gen Word)
-  specPrim (genValid :: Gen Word8)
-  specPrim (genValid :: Gen Word16)
-  specPrim (genValid :: Gen Word32)
-  specPrim (genValid :: Gen Word64)
-  specPrim (genValid :: Gen Char)
-  specPrim (arbitrary :: Gen Float)
-  specPrim (arbitrary :: Gen Double)
+  let extraSpec gen = specStorable gen
+  specPrim 0 (genValid :: Gen Int) extraSpec -- >> specAtomic
+  specPrim 0 (genValid :: Gen Int8) extraSpec
+  specPrim 0 (genValid :: Gen Int16) extraSpec
+  specPrim 0 (genValid :: Gen Int32) extraSpec
+  specPrim 0 (genValid :: Gen Int64) extraSpec
+  specPrim 0 (genValid :: Gen Word) extraSpec
+  specPrim 0 (genValid :: Gen Word8) extraSpec
+  specPrim 0 (genValid :: Gen Word16) extraSpec
+  specPrim 0 (genValid :: Gen Word32) extraSpec
+  specPrim 0 (genValid :: Gen Word64) extraSpec
+  specPrim '\0' (genValid :: Gen Char) extraSpec
+  specPrim 0 (arbitrary :: Gen Float) extraSpec
+  specPrim 0 (arbitrary :: Gen Double) extraSpec

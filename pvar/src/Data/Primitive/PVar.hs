@@ -10,7 +10,14 @@
 -- Portability : non-portable
 --
 module Data.Primitive.PVar
-  ( PVar
+  ( -- | It has significantly better performance
+    -- characterisitcs over `Data.IORef.IORef`, `Data.STRef.STRef` and
+    -- `Data.Primtive.MutVar.MutVar`. This is because value is mutated directly in memory
+    -- instead of following an extra pointer. Besides performance another consequence of this
+    -- is that values are always evaluated to normal form when being written into the `Pvar`
+
+  -- * Primitive variable
+    PVar
   , newPVar
   , withPVarST
   -- * Generic Operations
@@ -29,14 +36,14 @@ module Data.Primitive.PVar
   , newAlignedPinnedPVar
   , withPtrPVar
   , copyPVarToPtr
-  , toForeignPtr
+  , toForeignPtrPVar
   , isPinnedPVar
-  -- * Numeric infix operations
-  , (=+)
-  , (=-)
-  , (=*)
-  , (=/)
-  , (=%)
+  -- -- * Numeric infix operations
+  -- , (=+)
+  -- , (=-)
+  -- , (=*)
+  -- , (=/)
+  -- , (=%)
   -- ** Atomic operations
   , atomicModifyIntPVar
   , atomicModifyIntPVar_
@@ -66,12 +73,6 @@ import Data.Primitive.Types
 import GHC.Exts
 import GHC.ForeignPtr
 
--- | Size in bytes of a value stored inside variable. Mutable varibale is neither accessed
--- nor evaluated.
-sizeOfPVar :: Prim a => PVar s a -> Int
-sizeOfPVar pvar = I# (sizeOfPVar# pvar)
-{-# INLINE sizeOfPVar #-}
-
 
 -- | Check if `PVar` is backed by pinned memory or not
 isPinnedPVar :: PVar s a -> Bool
@@ -100,10 +101,10 @@ withPtrPVar pvar f =
 {-# INLINE withPtrPVar #-}
 
 -- | Convert `PVar` into a `ForeignPtr`, but only if it is backed by pinned memory.
-toForeignPtr :: PVar RealWorld a -> Maybe (ForeignPtr a)
-toForeignPtr pvar@(PVar mba#) =
+toForeignPtrPVar :: PVar RealWorld a -> Maybe (ForeignPtr a)
+toForeignPtrPVar pvar@(PVar mba#) =
   fmap (\(Ptr addr#) -> ForeignPtr addr# (PlainPtr mba#)) (toPtrPVar pvar)
-{-# INLINE toForeignPtr #-}
+{-# INLINE toForeignPtrPVar #-}
 
 -- | Copy contents of one mutable variable `PVar` into another
 copyPVar ::
