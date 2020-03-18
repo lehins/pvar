@@ -11,7 +11,6 @@ import Data.Foldable as F
 import Data.GenValidity
 import Data.Int
 import Data.List (intercalate, partition)
---import Data.Maybe
 import Data.Primitive.ByteArray (ByteArray, indexByteArray, newByteArray,
                                  newPinnedByteArray, readByteArray,
                                  sizeofByteArray, unsafeFreezeByteArray,
