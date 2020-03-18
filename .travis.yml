@@ -9,8 +9,6 @@ language: generic
 
 cache:
   directories:
-  #- $HOME/.ghc
-  #- $HOME/.cabal
   - $HOME/.stack
   - $TRAVIS_BUILD_DIR/.stack-work
   - $TRAVIS_BUILD_DIR/pvar/.stack-work
@@ -23,35 +21,8 @@ cache:
 # We set the compiler values here to tell Travis to use a different
 # cache file per set of arguments.
 #
-# If you need to have different apt packages for each combination in the
-# matrix, you can use a line such as:
-#     addons: {apt: {packages: [libfcgi-dev,libgmp-dev]}}
 matrix:
   include:
-  # We grab the appropriate GHC and cabal-install versions from hvr's PPA. See:
-  # https://github.com/hvr/multi-ghc-travis
-
-  # - env: BUILD=cabal GHCVER=8.4.3 CABALVER=2.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
-  #   compiler: ": #GHC 8.4.3"
-  #   addons:
-  #     apt:
-  #       packages: [cabal-install-2.0,ghc-8.4.3,happy-1.19.5,alex-3.1.7]
-  #       sources: [hvr-ghc]
-
-  # - env: BUILD=cabal GHCVER=8.6.3 CABALVER=2.0 HAPPYVER=1.19.5 ALEXVER=3.1.7
-  #   compiler: ": #GHC 8.6.3"
-  #   addons:
-  #     apt:
-  #       packages: [cabal-install-2.0,ghc-8.6.3,happy-1.19.5,alex-3.1.7]
-  #       sources: [hvr-ghc]
-
-  # # Build with the newest GHC and cabal-install. This is an accepted failure, see below.
-  # - env: BUILD=cabal GHCVER=head CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
-  #   compiler: ": #GHC HEAD"
-  #   addons:
-  #     apt:
-  #       packages: [cabal-install-head,ghc-head,happy-1.19.5,alex-3.1.7]
-  #       sources: [hvr-ghc]
 
   # The Stack builds. We can pass in arbitrary Stack arguments via the ARGS
   # variable, such as using --stack-yaml to point to a different file.
@@ -131,8 +102,7 @@ matrix:
         packages: [libgmp-dev]
 
   allow_failures:
-  #- env: BUILD=cabal GHCVER=head CABALVER=head HAPPYVER=1.19.5 ALEXVER=3.1.7
-  - env: GHC="" RESOLVER="nightly"
+  - env: RESOLVER="nightly"
 
 before_install:
 # Using compiler above sets CC to an invalid value, so unset it
