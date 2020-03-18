@@ -12,6 +12,7 @@ import Data.Bits
 import Data.List (partition)
 import Data.Foldable as F
 import Data.Maybe
+import Data.WideWord
 import Data.Primitive.ByteArray
 import Data.Primitive.PVar
 import Data.Primitive.PVar.Unsafe as Unsafe
@@ -359,6 +360,7 @@ specAtomic = do
           x' <- atomicReadIntPVar xvar
           yvar <- newPVar x
           mapConcurrently_ (\y' -> atomicModifyIntPVar_ yvar (f y')) xs
+          -- mapConcurrently_ (atomicModifyIntPVar_ yvar . f) xs
           y' <- atomicReadIntPVar yvar
           x' `shouldBe` y'
     casProp gen name f af =
@@ -376,6 +378,29 @@ specAtomic = do
           x' `shouldBe` y'
           F.foldl' f x' xs' `shouldBe` F.foldl' f x xs
 
+instance Arbitrary Int128 where
+  arbitrary = Int128 <$> arbitrary <*> arbitrary
+instance Arbitrary Word128 where
+  arbitrary = Word128 <$> arbitrary <*> arbitrary
+instance Arbitrary Word256 where
+  arbitrary = Word256 <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+instance CoArbitrary Int128 where
+  coarbitrary (Int128 a b) = coarbitrary a
+                           . coarbitrary b
+instance CoArbitrary Word128 where
+  coarbitrary (Word128 a b) = coarbitrary a
+                            . coarbitrary b
+instance CoArbitrary Word256 where
+  coarbitrary (Word256 a b c d) = coarbitrary a
+                                . coarbitrary b
+                                . coarbitrary c
+                                . coarbitrary d
+instance Function Int128 where
+  function = functionIntegral
+instance Function Word128 where
+  function = functionIntegral
+instance Function Word256 where
+  function = functionIntegral
 
 spec :: Spec
 spec = do
@@ -392,3 +417,6 @@ spec = do
   specPrim '\0' (genValid :: Gen Char) specStorable
   specPrim 0 (arbitrary :: Gen Float) specStorable
   specPrim 0 (arbitrary :: Gen Double) specStorable
+  specPrim 0 (arbitrary :: Gen Int128) specStorable
+  specPrim 0 (arbitrary :: Gen Word128) specStorable
+  --specPrim 0 (arbitrary :: Gen Word256) specStorable -- https://github.com/erikd/wide-word/issues/40
