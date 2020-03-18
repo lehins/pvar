@@ -1,7 +1,0 @@
-resolver: lts-10.10
-packages:
-- pvar
-extra-deps:
-- validity-0.9.0.3@sha256:ee12ebe4c09ecd52c1e36604da5ab00c17d4fc815a4d18e73f7fb2f9ba449f46,2612
-- genvalidity-0.10.0.1@sha256:00b12168de64a6346588b0d69025d660fd6c92c4a47a6b706cabba96c65864fa,2833
-- wide-word-0.1.1.0@sha256:8ce41dbfda1c4dec1bbd7e5c788b4486ce8eb8a6e3d199d4fd4340f4c4c16802,2844
