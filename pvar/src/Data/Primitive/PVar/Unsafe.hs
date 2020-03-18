@@ -58,7 +58,7 @@ import Data.Typeable
 -- | Convert `PVar` into a `ForeignPtr`, very unsafe if not backed by pinned memory.
 --
 -- @since 0.1.0
-unsafeToForeignPtrPVar :: PVar RealWorld a -> ForeignPtr a
+unsafeToForeignPtrPVar :: PVar IO a -> ForeignPtr a
 unsafeToForeignPtrPVar pvar@(PVar mba#) =
   case unsafeToPtrPVar pvar of
     Ptr addr# -> ForeignPtr addr# (PlainPtr mba#)
@@ -83,7 +83,7 @@ toPtrPVar pvar@(PVar mba#)
 -- @since 0.1.0
 setPVar# ::
      (PrimMonad m, Prim a)
-  => PVar (PrimState m) a
+  => PVar m a
   -> Int# -- ^ Byte value to fill the `PVar` with
   -> m ()
 setPVar# pvar@(PVar mba#) a# =
@@ -93,7 +93,7 @@ setPVar# pvar@(PVar mba#) a# =
 -- | Reset contents of a mutable variable to zero.
 --
 -- @since 0.1.0
-zeroPVar :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> m ()
+zeroPVar :: (PrimMonad m, Prim a) => PVar m a -> m ()
 zeroPVar pvar = setPVar# pvar 0#
 {-# INLINE zeroPVar #-}
 
@@ -103,7 +103,7 @@ zeroPVar pvar = setPVar# pvar 0#
 -- @since 0.1.0
 copyPVarToMutableByteArray ::
      (PrimMonad m, Prim a)
-  => PVar (PrimState m) a
+  => PVar m a
   -> MutableByteArray (PrimState m)
   -> Int -- ^ Offset in number of elements into the array
   -> m ()
@@ -121,7 +121,7 @@ copyFromByteArrayPVar ::
      (PrimMonad m, Prim a)
   => ByteArray -- ^ Source array
   -> Int -- ^ Offset in number of elements into the array
-  -> PVar (PrimState m) a
+  -> PVar m a
   -> m ()
 copyFromByteArrayPVar ba offset pvar =
   copyBytesFromByteArrayPVar ba (offset * sizeOfPVar pvar) pvar
@@ -136,7 +136,7 @@ copyFromMutableByteArrayPVar ::
      (PrimMonad m, Prim a)
   => MutableByteArray (PrimState m)
   -> Int -- ^ Offset in number of elements into the array
-  -> PVar (PrimState m) a
+  -> PVar m a
   -> m ()
 copyFromMutableByteArrayPVar mba offset pvar =
   copyBytesFromMutableByteArrayPVar mba (offset * sizeOfPVar pvar) pvar
@@ -150,7 +150,7 @@ copyFromMutableByteArrayPVar mba offset pvar =
 -- @since 0.1.0
 copyBytesPVarToMutableByteArray ::
      (PrimMonad m, Prim a)
-  => PVar (PrimState m) a
+  => PVar m a
   -> MutableByteArray (PrimState m)
   -> Int -- ^ Offset in bytes into the array
   -> m ()
@@ -168,7 +168,7 @@ copyBytesFromByteArrayPVar ::
      (PrimMonad m, Prim a)
   => ByteArray -- ^ Source array
   -> Int -- ^ Offset in bytes into the array
-  -> PVar (PrimState m) a
+  -> PVar m a
   -> m ()
 copyBytesFromByteArrayPVar (ByteArray ba#) (I# offset#) pvar@(PVar mba#) =
   primitive_ (copyByteArray# ba# offset# mba# 0# (sizeOfPVar# pvar))
@@ -183,7 +183,7 @@ copyBytesFromMutableByteArrayPVar ::
      (PrimMonad m, Prim a)
   => MutableByteArray (PrimState m)
   -> Int -- ^ Offset in bytes into the array
-  -> PVar (PrimState m) a
+  -> PVar m a
   -> m ()
 copyBytesFromMutableByteArrayPVar (MutableByteArray mbas#) (I# offset#) pvar@(PVar mbad#) =
   primitive_ (copyMutableByteArray# mbas# offset# mbad# 0# (sizeOfPVar# pvar))

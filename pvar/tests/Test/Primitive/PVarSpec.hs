@@ -37,14 +37,14 @@ forAllST g propM = forAll g $ \v -> monadicST $ run $ propM v
 forAllPVarST ::
      (Show p, Prim p, Testable t)
   => Gen p
-  -> (forall s. p -> PVar s p -> ST s t)
+  -> (forall s. p -> PVar (ST s) p -> ST s t)
   -> Property
 forAllPVarST g propM = forAllST g $ \v -> newPVar v >>= propM v
 
 forAllPVarIO ::
      (Show p, Prim p, Testable t)
   => Gen p
-  -> (p -> PVar RealWorld p -> IO t)
+  -> (p -> PVar IO p -> IO t)
   -> Property
 forAllPVarIO g propM = forAllIO g $ \v -> newPVar v >>= propM v
 
@@ -52,7 +52,7 @@ propPVarST ::
      (Show p, Prim p, Testable t)
   => String
   -> Gen p
-  -> (forall s. p -> PVar s p -> ST s t)
+  -> (forall s. p -> PVar (ST s) p -> ST s t)
   -> Spec
 propPVarST name gen action = prop name $ forAllPVarST gen action
 
@@ -60,7 +60,7 @@ propPVarIO ::
      (Show p, Prim p, Testable t)
   => String
   -> Gen p
-  -> (p -> PVar RealWorld p -> IO t)
+  -> (p -> PVar IO p -> IO t)
   -> Spec
 propPVarIO name gen action = prop name $ forAllPVarIO gen action
 

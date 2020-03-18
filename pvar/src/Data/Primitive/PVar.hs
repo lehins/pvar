@@ -35,10 +35,7 @@ module Data.Primitive.PVar
   , alignmentPVar
   -- * Pinned memory
   --
-  -- In theory it is unsafe to mix `Storable` and `Prim` operations on the same chunk of
-  -- memory, because some instances can have differnet memory layouts for the same
-  -- type. This is highly uncommon in practice and if you are intermixing the two concepts
-  -- together you probably already know what you are doing.
+  -- $pinned
   , newPinnedPVar
   , newAlignedPinnedPVar
   , withPtrPVar
@@ -47,6 +44,7 @@ module Data.Primitive.PVar
   , copyPVarToPtr
   , toForeignPtrPVar
   , isPinnedPVar
+  , peekPrim, pokePrim
   -- -- * Numeric infix operations
   -- , (=+)
   -- , (=-)
@@ -86,13 +84,21 @@ import qualified Foreign.Storable as S
 import GHC.Exts
 import GHC.ForeignPtr
 
+-- $pinned
+-- In theory it is unsafe to mix `S.Storable` and `Prim` operations on the same chunk of
+-- memory, because some instances can have differnet memory layouts for the same
+-- type. This is highly uncommon in practice and if you are intermixing the two concepts
+-- together you probably already know what you are doing.
+
+
+
 -- | Run an `ST` action on a mutable variable.
 --
 -- @since 0.1.0
 withPVarST ::
      Prim p
   => p -- ^ Initial value assigned to the mutable variable
-  -> (forall s. PVar s p -> ST s a) -- ^ Action to run
+  -> (forall s. PVar (ST s) p -> ST s a) -- ^ Action to run
   -> a -- ^ Result produced by the `ST` action
 withPVarST x st = runST (newPVar x >>= st)
 {-# INLINE withPVarST #-}
@@ -114,7 +120,7 @@ withPtrPVar pvar f =
 -- | Convert `PVar` into a `ForeignPtr`, but only if it is backed by pinned memory.
 --
 -- @since 0.1.0
-toForeignPtrPVar :: PVar RealWorld a -> Maybe (ForeignPtr a)
+toForeignPtrPVar :: PVar IO a -> Maybe (ForeignPtr a)
 toForeignPtrPVar pvar
   | isPinnedPVar pvar = Just $ unsafeToForeignPtrPVar pvar
   | otherwise = Nothing
@@ -125,8 +131,8 @@ toForeignPtrPVar pvar
 -- @since 0.1.0
 copyPVar ::
      (PrimMonad m, Prim a)
-  => PVar (PrimState m) a -- ^ Source variable
-  -> PVar (PrimState m) a -- ^ Destination variable
+  => PVar m a -- ^ Source variable
+  -> PVar m a -- ^ Destination variable
   -> m ()
 copyPVar pvar@(PVar mbas#) (PVar mbad#) =
   primitive_ (copyMutableByteArray# mbas# 0# mbad# 0# (sizeOfPVar# pvar))
@@ -135,7 +141,7 @@ copyPVar pvar@(PVar mbas#) (PVar mbad#) =
 -- | Copy contents of a mutable variable `PVar` into a pointer `Ptr`
 --
 -- @since 0.1.0
-copyPVarToPtr :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> Ptr a -> m ()
+copyPVarToPtr :: (PrimMonad m, Prim a) => PVar m a -> Ptr a -> m ()
 copyPVarToPtr pvar@(PVar mbas#) (Ptr addr#) =
   primitive_ (copyMutableByteArrayToAddr# mbas# 0# addr# (sizeOfPVar# pvar))
 {-# INLINE copyPVarToPtr #-}
@@ -143,21 +149,21 @@ copyPVarToPtr pvar@(PVar mbas#) (Ptr addr#) =
 -- | Apply a pure function to the contents of a mutable variable. Returns the old value.
 --
 -- @since 0.1.0
-modifyPVar :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> (a -> a) -> m a
+modifyPVar :: (PrimMonad m, Prim a) => PVar m a -> (a -> a) -> m a
 modifyPVar pvar f = modifyPVarM pvar (return . f)
 {-# INLINE modifyPVar #-}
 
 -- | Apply a pure function to the contents of a mutable variable.
 --
 -- @since 0.1.0
-modifyPVar_ :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> (a -> a) -> m ()
+modifyPVar_ :: (PrimMonad m, Prim a) => PVar m a -> (a -> a) -> m ()
 modifyPVar_ pvar f = modifyPVarM_ pvar (return . f)
 {-# INLINE modifyPVar_ #-}
 
 -- | Apply a monadic action to the contents of a mutable variable. Returns the old value.
 --
 -- @since 0.1.0
-modifyPVarM :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> (a -> m a) -> m a
+modifyPVarM :: (PrimMonad m, Prim a) => PVar m a -> (a -> m a) -> m a
 modifyPVarM pvar f = do
   a <- readPVar pvar
   a' <- f a
@@ -168,14 +174,14 @@ modifyPVarM pvar f = do
 -- | Apply a monadic action to the contents of a mutable variable.
 --
 -- @since 0.1.0
-modifyPVarM_ :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> (a -> m a) -> m ()
+modifyPVarM_ :: (PrimMonad m, Prim a) => PVar m a -> (a -> m a) -> m ()
 modifyPVarM_ pvar f = readPVar pvar >>= f >>= writePVar pvar
 {-# INLINE modifyPVarM_ #-}
 
 -- | Swap contents of two mutable variables. Returns their old values.
 --
 -- @since 0.1.0
-swapPVars :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> PVar (PrimState m) a -> m (a, a)
+swapPVars :: (PrimMonad m, Prim a) => PVar m a -> PVar m a -> m (a, a)
 swapPVars pvar1 pvar2 = do
   a1 <- readPVar pvar1
   a2 <- modifyPVar pvar2 (const a1)
@@ -186,7 +192,7 @@ swapPVars pvar1 pvar2 = do
 -- | Swap contents of two mutable variables.
 --
 -- @since 0.1.0
-swapPVars_ :: (PrimMonad m, Prim a) => PVar (PrimState m) a -> PVar (PrimState m) a -> m ()
+swapPVars_ :: (PrimMonad m, Prim a) => PVar m a -> PVar m a -> m ()
 swapPVars_ pvar1 pvar2 = void $ swapPVars pvar1 pvar2
 {-# INLINE swapPVars_ #-}
 
@@ -226,7 +232,7 @@ swapPVars_ pvar1 pvar2 = void $ swapPVars pvar1 pvar2
 withStorablePVar ::
      (PrimMonad m, S.Storable a)
   => a -- ^ Initial value
-  -> (PVar (PrimState m) a -> Ptr a -> m b) -- ^ Action to run
+  -> (PVar m a -> Ptr a -> m b) -- ^ Action to run
   -> m b
 withStorablePVar a f = do
   pvar <- rawStorablePVar
@@ -239,7 +245,7 @@ withStorablePVar a f = do
 withAlignedStorablePVar ::
      (PrimMonad m, S.Storable a)
   => a -- ^ Initial value
-  -> (PVar (PrimState m) a -> Ptr a -> m b) -- ^ Action to run
+  -> (PVar m a -> Ptr a -> m b) -- ^ Action to run
   -> m b
 withAlignedStorablePVar a f = do
   pvar <- rawAlignedStorablePVar
@@ -251,7 +257,7 @@ withAlignedStorablePVar a f = do
 -- an `Int`. Implies a full memory barrier.
 --
 -- @since 0.1.0
-atomicReadIntPVar :: PrimMonad m => PVar (PrimState m) Int -> m Int
+atomicReadIntPVar :: PrimMonad m => PVar m Int -> m Int
 atomicReadIntPVar (PVar mba#) =
   primitive $ \s# ->
     case atomicReadIntArray# mba# 0# s# of
@@ -261,7 +267,7 @@ atomicReadIntPVar (PVar mba#) =
 -- | Write a value into an `PVar` atomically. Implies a full memory barrier.
 --
 -- @since 0.1.0
-atomicWriteIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m ()
+atomicWriteIntPVar :: PrimMonad m => PVar m Int -> Int -> m ()
 atomicWriteIntPVar (PVar mba#) a = primitive_ (atomicWriteIntArray# mba# 0# (unI# a))
 {-# INLINE atomicWriteIntPVar #-}
 
@@ -272,7 +278,7 @@ atomicWriteIntPVar (PVar mba#) a = primitive_ (atomicWriteIntArray# mba# 0# (unI
 -- @since 0.1.0
 casIntPVar ::
      PrimMonad m
-  => PVar (PrimState m) Int -- ^ Variable to mutate
+  => PVar m Int -- ^ Variable to mutate
   -> Int -- ^ Old expected value
   -> Int -- ^ New value
   -> m Int -- ^ Old actual value
@@ -288,7 +294,7 @@ casIntPVar (PVar mba#) old new =
 -- the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
-atomicAddIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m Int
+atomicAddIntPVar :: PrimMonad m => PVar m Int -> Int -> m Int
 atomicAddIntPVar (PVar mba#) a =
   primitive $ \s# ->
     case fetchAddIntArray# mba# 0# (unI# a) s# of
@@ -299,7 +305,7 @@ atomicAddIntPVar (PVar mba#) a =
 -- previous value of the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
-atomicSubIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m Int
+atomicSubIntPVar :: PrimMonad m => PVar m Int -> Int -> m Int
 atomicSubIntPVar (PVar mba#) a =
   primitive $ \s# ->
     case fetchSubIntArray# mba# 0# (unI# a) s# of
@@ -311,7 +317,7 @@ atomicSubIntPVar (PVar mba#) a =
 -- value of the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
-atomicAndIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m Int
+atomicAndIntPVar :: PrimMonad m => PVar m Int -> Int -> m Int
 atomicAndIntPVar (PVar mba#) a =
   primitive $ \s# ->
     case fetchAndIntArray# mba# 0# (unI# a) s# of
@@ -324,7 +330,7 @@ atomicAndIntPVar (PVar mba#) a =
 -- a full memory barrier.
 --
 -- @since 0.1.0
-atomicNandIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m Int
+atomicNandIntPVar :: PrimMonad m => PVar m Int -> Int -> m Int
 atomicNandIntPVar (PVar mba#) a =
   primitive $ \s# ->
     case fetchNandIntArray# mba# 0# (unI# a) s# of
@@ -336,7 +342,7 @@ atomicNandIntPVar (PVar mba#) a =
 -- value of the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
-atomicOrIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m Int
+atomicOrIntPVar :: PrimMonad m => PVar m Int -> Int -> m Int
 atomicOrIntPVar (PVar mba#) a =
   primitive $ \s# ->
     case fetchOrIntArray# mba# 0# (unI# a) s# of
@@ -348,7 +354,7 @@ atomicOrIntPVar (PVar mba#) a =
 -- previous value of the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
-atomicXorIntPVar :: PrimMonad m => PVar (PrimState m) Int -> Int -> m Int
+atomicXorIntPVar :: PrimMonad m => PVar m Int -> Int -> m Int
 atomicXorIntPVar (PVar mba#) a =
   primitive $ \s# ->
     case fetchXorIntArray# mba# 0# (unI# a) s# of
@@ -360,7 +366,7 @@ atomicXorIntPVar (PVar mba#) a =
 -- previous value of the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
-atomicNotIntPVar :: PrimMonad m => PVar (PrimState m) Int -> m Int
+atomicNotIntPVar :: PrimMonad m => PVar m Int -> m Int
 atomicNotIntPVar (PVar mba#) =
   primitive $ \s# ->
     case fetchXorIntArray# mba# 0# fullInt# s# of
