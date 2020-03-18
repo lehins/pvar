@@ -1,6 +1,10 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UnboxedTuples #-}
+{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ >= 800
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+#endif
 -- |
 -- Module      : Data.Primitive.PVar
 -- Copyright   : (c) Alexey Kuleshevich 2020

@@ -9,14 +9,13 @@ import Control.DeepSeq
 import Data.GenValidity
 import Data.Int
 import Data.Bits
-import Data.List (partition)
+import Data.List (partition, intercalate)
 import Data.Foldable as F
 import Data.Maybe
-import Data.WideWord
+import Data.Primitive (sizeOf, alignment)
 import Data.Primitive.ByteArray
 import Data.Primitive.PVar
 import Data.Primitive.PVar.Unsafe as Unsafe
-import Data.Primitive.Types (sizeOf, alignment)
 import Data.Typeable
 import Data.Word
 import Foreign.ForeignPtr
@@ -25,6 +24,7 @@ import qualified Foreign.Storable as Storable
 import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.QuickCheck hiding ((.&.))
+import Test.QuickCheck.Function (apply)
 import Test.QuickCheck.Monadic
 
 forAllIO :: (Show p, Testable t) => Gen p -> (p -> IO t) -> Property
@@ -68,7 +68,23 @@ propPVarIO name gen action = prop name $ forAllPVarIO gen action
 -- @a@. Also contains a valid index in number of elements into the array
 data ByteArrayNonEmpty a =
   ByteArrayNonEmpty Int ByteArray
-  deriving (Show, Eq)
+
+-- For testing with older primitive can't derive Show and Eq
+instance (Prim a, Show a) => Show (ByteArrayNonEmpty a) where
+  show (ByteArrayNonEmpty i ba) =
+    "(ByteArrayNonEmpty " ++
+    show i ++
+    "[" ++
+    intercalate "," (map show (byteArrayToList undefined ba :: [a])) ++ "]"
+
+instance (Prim a, Eq a) => Eq (ByteArrayNonEmpty a) where
+  (ByteArrayNonEmpty i1 ba1) == (ByteArrayNonEmpty i2 ba2) =
+    i1 == i2 && byteArrayToList (undefined :: a) ba1 == byteArrayToList (undefined :: a) ba2
+
+byteArrayToList :: forall a. Prim a => a -> ByteArray -> [a]
+byteArrayToList dummy ba = map (indexByteArray ba :: Int -> a) [0 .. n - 1]
+  where
+    n = sizeofByteArray ba `div` sizeOf dummy
 
 instance (Arbitrary a, Prim a) => Arbitrary (ByteArrayNonEmpty a) where
   arbitrary = genByteArrayNonEmpty (arbitrary :: Gen a)
@@ -117,29 +133,29 @@ specPrim defZero gen extraSpec =
     propPVarIO "modifyPVar" gen $ \a pvar ->
       return $
       forAll arbitrary $ \f -> do
-        modifyPVar pvar (applyFun f) `shouldReturn` a
-        readPVar pvar `shouldReturn` applyFun f a
+        modifyPVar pvar (apply f) `shouldReturn` a
+        readPVar pvar `shouldReturn` apply f a
     propPVarIO "modifyPVar_" gen $ \a pvar ->
       return $
       forAll arbitrary $ \f -> do
-        modifyPVar_ pvar (applyFun f)
-        readPVar pvar `shouldReturn` applyFun f a
+        modifyPVar_ pvar (apply f)
+        readPVar pvar `shouldReturn` apply f a
     propPVarIO "modifyPVarM" gen $ \a pvar ->
       return $
       forAllIO arbitrary $ \f -> do
         a' <-
           modifyPVarM pvar $ \a' -> do
             a' `shouldBe` a
-            pure $ applyFun f a'
+            pure $ apply f a'
         a' `shouldBe` a
-        readPVar pvar `shouldReturn` applyFun f a
+        readPVar pvar `shouldReturn` apply f a
     propPVarIO "modifyPVarM_" gen $ \a pvar ->
       return $
       forAllIO arbitrary $ \f -> do
         modifyPVarM_ pvar $ \a' -> do
           a' `shouldBe` a
-          pure $ applyFun f a'
-        readPVar pvar `shouldReturn` applyFun f a
+          pure $ apply f a'
+        readPVar pvar `shouldReturn` apply f a
     propPVarIO "swapPVars" gen $ \a avar ->
       return $
       forAllPVarIO gen $ \b bvar -> do
@@ -336,13 +352,13 @@ specAtomic = do
       propPVarIO "atomicNotIntPVar" gen $ \x xvar ->
         return $
         forAllIO arbitrary $ \(Positive n) -> do
-          xs' <- replicateConcurrently n (atomicNotIntPVar xvar)
+          xs' <- mapConcurrently (\_ -> atomicNotIntPVar xvar) [1 :: Int .. n]
           x' <- atomicReadIntPVar xvar
           yvar <- newPVar x
           ys' <-
-            replicateConcurrently
-              n
-              (atomicModifyIntPVar yvar (\y -> (complement y, y)))
+            mapConcurrently
+              (\_ -> atomicModifyIntPVar yvar (\y -> (complement y, y)))
+              [1..n]
           y' <- atomicReadIntPVar yvar
           x' `shouldBe` y'
           -- binary negation of N times results in two values, both of which happen N/2
@@ -357,10 +373,10 @@ specAtomic = do
       propPVarIO name gen $ \x xvar ->
         return $
         forAllIO (genListOf gen) $ \xs -> do
-          mapConcurrently_ (af xvar) xs
+          void $ mapConcurrently (af xvar) xs
           x' <- atomicReadIntPVar xvar
           yvar <- newPVar x
-          mapConcurrently_ (atomicModifyIntPVar_ yvar . f) xs
+          void $ mapConcurrently (atomicModifyIntPVar_ yvar . f) xs
           y' <- atomicReadIntPVar yvar
           x' `shouldBe` y'
     casProp gen name f af =
@@ -379,30 +395,6 @@ specAtomic = do
           F.foldl' f x' xs' `shouldBe` F.foldl' f x xs
           F.foldl' f y' ys' `shouldBe` F.foldl' f x xs
 
-instance Arbitrary Int128 where
-  arbitrary = Int128 <$> arbitrary <*> arbitrary
-instance Arbitrary Word128 where
-  arbitrary = Word128 <$> arbitrary <*> arbitrary
-instance Arbitrary Word256 where
-  arbitrary = Word256 <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-instance CoArbitrary Int128 where
-  coarbitrary (Int128 a b) = coarbitrary a
-                           . coarbitrary b
-instance CoArbitrary Word128 where
-  coarbitrary (Word128 a b) = coarbitrary a
-                            . coarbitrary b
-instance CoArbitrary Word256 where
-  coarbitrary (Word256 a b c d) = coarbitrary a
-                                . coarbitrary b
-                                . coarbitrary c
-                                . coarbitrary d
-instance Function Int128 where
-  function = functionIntegral
-instance Function Word128 where
-  function = functionIntegral
-instance Function Word256 where
-  function = functionIntegral
-
 spec :: Spec
 spec = do
   specPrim 0 (genValid :: Gen Int) (\gen -> specStorable gen >> specAtomic)
@@ -418,6 +410,3 @@ spec = do
   specPrim '\0' (genValid :: Gen Char) specStorable
   specPrim 0 (arbitrary :: Gen Float) specStorable
   specPrim 0 (arbitrary :: Gen Double) specStorable
-  specPrim 0 (arbitrary :: Gen Int128) specStorable
-  specPrim 0 (arbitrary :: Gen Word128) specStorable
-  --specPrim 0 (arbitrary :: Gen Word256) specStorable -- https://github.com/erikd/wide-word/issues/40

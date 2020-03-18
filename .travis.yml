@@ -27,18 +27,29 @@ matrix:
   # The Stack builds. We can pass in arbitrary Stack arguments via the ARGS
   # variable, such as using --stack-yaml to point to a different file.
 
-  # - env: RESOLVER="lts-12.26" STACK_YAML="stack-extra-deps.yaml"
-  #   compiler: ": #stack GHC-8.4.4 (lts-12.26)"
-  #   os: osx
+  - env: GHC="7.10.2" RESOLVER="lts-3.22" STACK_YAML="stack-lts-3.yaml"
+    compiler: ": #stack GHC-7.10.2 (lts-3.22)"
+    addons:
+      apt:
+        packages: [libgmp-dev]
 
-  # - env: RESOLVER="lts-14.27" STACK_YAML="stack-extra-deps.yaml"
-  #   compiler: ": #stack GHC-8.6.5 (lts-14.27)"
-  #   os: osx
+  - env: GHC="7.10.3" RESOLVER="lts-6.35" STACK_YAML="stack-lts-3.yaml"
+    compiler: ": #stack GHC-7.10.3 (lts-6.35)"
+    addons:
+      apt:
+        packages: [libgmp-dev]
 
-  # - env: RESOLVER="lts-15"
-  #   compiler: ": #stack GHC-8.8.2 (lts-15)"
-  #   os: osx
+  - env: GHC="8.0.1" RESOLVER="lts-7.24" STACK_YAML="stack-lts-7.yaml"
+    compiler: ": #stack GHC-8.0.1 (lts-7.27)"
+    addons:
+      apt:
+        packages: [libgmp-dev]
 
+  - env: GHC="8.0.2" RESOLVER="lts-8.24" STACK_YAML="stack-lts-7.yaml"
+    compiler: ": #stack GHC-8.0.2 (lts-8.27)"
+    addons:
+      apt:
+        packages: [libgmp-dev]
 
   - env: GHC="8.2.2" RESOLVER="lts-10.10" STACK_YAML="stack-lts-10.yaml"
     compiler: ": #stack GHC-8.2.2 (lts-10.10)"
@@ -82,14 +93,20 @@ matrix:
       apt:
         packages: [libgmp-dev]
 
-  - env: GHC="8.6.6" RESOLVER="lts-14.27" COVERALLS_STACK_YAML="stack.yaml"
+  - env: GHC="8.6.5" RESOLVER="lts-14.27" COVERALLS_STACK_YAML="stack.yaml"
     compiler: ": #stack GHC-8.6.5 (lts-14.27)"
     addons:
       apt:
         packages: [libgmp-dev]
 
-  - env: GHC="8.8.2" RESOLVER="lts-15"
-    compiler: ": #stack GHC-8.8.2 (lts-15)"
+  - env: GHC="8.8.2" RESOLVER="lts-15.3"
+    compiler: ": #stack GHC-8.8.2 (lts-15.3)"
+    addons:
+      apt:
+        packages: [libgmp-dev]
+
+  - env: GHC="8.8.3" RESOLVER="lts-15"
+    compiler: ": #stack GHC-8.8.3 (lts-15)"
     addons:
       apt:
         packages: [libgmp-dev]

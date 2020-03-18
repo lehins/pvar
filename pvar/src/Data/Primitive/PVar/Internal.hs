@@ -1,10 +1,11 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE UnliftedFFITypes #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UnboxedTuples #-}
---{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 -- |
 -- Module      : Data.Primitive.PVar.Internal
 -- Copyright   : (c) Alexey Kuleshevich 2020
@@ -40,12 +41,16 @@ module Data.Primitive.PVar.Internal
   , atomicModifyIntPVar
   , atomicModifyIntArray_#
   , atomicModifyIntPVar_
+  -- * Re-exports
+  , isByteArrayPinned#
+  , isMutableByteArrayPinned#
   )
   where
 
 import Control.DeepSeq
 import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_,
                                 touch, unsafePrimToPrim)
+import Data.Primitive (sizeOf, alignment)
 import Data.Primitive.Types
 import qualified Foreign.Storable as S
 import GHC.Exts
@@ -350,3 +355,13 @@ atomicModifyIntPVar_ ::
 atomicModifyIntPVar_ (PVar mba#) f =
   primitive_ (atomicModifyIntArray_# mba# 0# (\i# -> unI# (f (I# i#))))
 {-# INLINE atomicModifyIntPVar_ #-}
+
+
+-- ghc-8.2 (i.e. 802 version) introduced these two functions, for versions before those
+-- use their reimplementations in C:
+# if __GLASGOW_HASKELL__ < 802
+foreign import ccall unsafe "pvar.c pvar_is_byte_array_pinned"
+  isByteArrayPinned# :: ByteArray# -> Int#
+foreign import ccall unsafe "pvar.c pvar_is_byte_array_pinned"
+  isMutableByteArrayPinned# :: MutableByteArray# s -> Int#
+#endif
