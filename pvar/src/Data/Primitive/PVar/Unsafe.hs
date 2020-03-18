@@ -72,7 +72,7 @@ unsafeToForeignPtrPVar pvar@(PVar mba#) =
 -- `Data.Primitive.PVar.toForeignPtr` instead.
 --
 -- @since 0.1.0
-toPtrPVar :: PVar s a -> Maybe (Ptr a)
+toPtrPVar :: PVar m a -> Maybe (Ptr a)
 toPtrPVar pvar@(PVar mba#)
   | isPinnedPVar pvar = Just $ unsafeToPtrPVar pvar
   | otherwise = Nothing

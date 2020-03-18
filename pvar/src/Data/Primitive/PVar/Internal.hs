@@ -71,7 +71,7 @@ instance Prim a => S.Storable (PVar IO a) where
   {-# INLINE pokeElemOff #-}
 
 -- | Values are already written into `PVar` in NF, this instance is trivial.
-instance NFData (PVar s a) where
+instance NFData (PVar m a) where
   rnf (PVar _) = ()
 
 -- | Create a mutable variable in unpinned memory (i.e. GC can move it) with an initial
@@ -182,7 +182,7 @@ rawAlignedStorablePVar =
 -- | Get the address to the contents. This is highly unsafe, espcially if memory is not pinned
 --
 -- @since 0.1.0
-unsafeToPtrPVar :: PVar s a -> Ptr a
+unsafeToPtrPVar :: PVar m a -> Ptr a
 unsafeToPtrPVar (PVar mba#) = Ptr (byteArrayContents# (unsafeCoerce# mba#))
 {-# INLINE unsafeToPtrPVar #-}
 
@@ -233,14 +233,14 @@ writePVar (PVar mba#) v = primitive_ (writeByteArray# mba# 0# v)
 -- | Get the size of the mutable variable in bytes as an unpacked integer
 --
 -- @since 0.1.0
-sizeOfPVar# :: forall s a. Prim a => PVar s a -> Int#
+sizeOfPVar# :: forall m a. Prim a => PVar m a -> Int#
 sizeOfPVar# _ = sizeOf# (undefined :: a)
 {-# INLINE sizeOfPVar# #-}
 
 -- | Get the alignment of the mutable variable in bytes as an unpacked integer
 --
 -- @since 0.1.0
-alignmentPVar# :: forall s a. Prim a => PVar s a -> Int#
+alignmentPVar# :: forall m a. Prim a => PVar m a -> Int#
 alignmentPVar# _ = alignment# (undefined :: a)
 {-# INLINE alignmentPVar# #-}
 
@@ -249,7 +249,7 @@ alignmentPVar# _ = alignment# (undefined :: a)
 -- accessed nor evaluated.
 --
 -- @since 0.1.0
-sizeOfPVar :: Prim a => PVar s a -> Int
+sizeOfPVar :: Prim a => PVar m a -> Int
 sizeOfPVar pvar = I# (sizeOfPVar# pvar)
 {-# INLINE sizeOfPVar #-}
 
@@ -257,7 +257,7 @@ sizeOfPVar pvar = I# (sizeOfPVar# pvar)
 -- neither accessed nor evaluated.
 --
 -- @since 0.1.0
-alignmentPVar :: Prim a => PVar s a -> Int
+alignmentPVar :: Prim a => PVar m a -> Int
 alignmentPVar pvar = I# (alignmentPVar# pvar)
 {-# INLINE alignmentPVar #-}
 
@@ -271,7 +271,7 @@ unI# (I# i#) = i#
 -- | Check if `PVar` is backed by pinned memory or not
 --
 -- @since 0.1.0
-isPinnedPVar :: PVar s a -> Bool
+isPinnedPVar :: PVar m a -> Bool
 isPinnedPVar (PVar mba#) = isTrue# (isMutableByteArrayPinned# mba#)
 {-# INLINE isPinnedPVar #-}
 

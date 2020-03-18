@@ -107,7 +107,7 @@ withPVarST x st = runST (newPVar x >>= st)
 -- backed by pinned memory, cause otherwise it would be unsafe.
 --
 -- @since 0.1.0
-withPtrPVar :: (PrimMonad m, Prim a) => PVar s a -> (Ptr a -> m b) -> m (Maybe b)
+withPtrPVar :: (PrimMonad m, Prim a) => PVar n a -> (Ptr a -> m b) -> m (Maybe b)
 withPtrPVar pvar f =
   case toPtrPVar pvar of
     Nothing -> return Nothing
