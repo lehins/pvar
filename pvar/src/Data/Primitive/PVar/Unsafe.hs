@@ -45,11 +45,10 @@ module Data.Primitive.PVar.Unsafe
   )
   where
 
-import Control.Monad.Primitive (PrimMonad(primitive), PrimState, touch,  primitive_)
+import Control.Monad.Primitive (PrimMonad, PrimState, primitive_)
 import Data.Primitive.PVar.Internal
 import Data.Primitive.ByteArray
 import Data.Primitive.Types
-import qualified Foreign.Storable as S
 import GHC.Exts as Exts
 import GHC.ForeignPtr
 import Data.Typeable
@@ -73,7 +72,7 @@ unsafeToForeignPtrPVar pvar@(PVar mba#) =
 --
 -- @since 0.1.0
 toPtrPVar :: PVar m a -> Maybe (Ptr a)
-toPtrPVar pvar@(PVar mba#)
+toPtrPVar pvar
   | isPinnedPVar pvar = Just $ unsafeToPtrPVar pvar
   | otherwise = Nothing
 {-# INLINE toPtrPVar #-}

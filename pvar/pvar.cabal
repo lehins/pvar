@@ -1,7 +1,7 @@
 cabal-version: 1.12
 
 name:           pvar
-version:        0.1.0.0
+version:        0.1.1.0
 synopsis:       Mutable variable with primitive values
 description:    Please see the README on GitHub at <https://github.com/lehins/pvar#readme>
 homepage:       https://github.com/lehins/pvar#readme
@@ -12,13 +12,14 @@ copyright:      Alexey Kuleshevich
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
-tested-with:    GHC == 8.4.3
+tested-with:    GHC == 8.2.2
+              , GHC == 8.4.3
               , GHC == 8.4.4
               , GHC == 8.6.3
               , GHC == 8.6.4
               , GHC == 8.6.5
-              , GHC == 8.8.1
               , GHC == 8.8.2
+              , GHC == 8.8.3
 extra-source-files: README.md
                   , CHANGELOG.md
 
@@ -31,10 +32,11 @@ library
                  , Data.Primitive.PVar.Unsafe
   other-modules: Data.Primitive.PVar.Internal
   hs-source-dirs: src
-  build-depends: base >=4.7 && <5
+  build-depends: base >=4.10 && <5
                , deepseq
                , primitive >= 0.3.1
   default-language: Haskell2010
+  ghc-options: -Wall
 
 test-suite tests
   type: exitcode-stdio-1.0
@@ -42,7 +44,7 @@ test-suite tests
   other-modules: Spec
                , Test.Primitive.PVarSpec
   hs-source-dirs: tests
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends: base >=4.7 && <5
                , async
                , deepseq

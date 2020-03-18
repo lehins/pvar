@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UnboxedTuples #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints -fobject-code #-}
+--{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 -- |
 -- Module      : Data.Primitive.PVar.Internal
 -- Copyright   : (c) Alexey Kuleshevich 2020
@@ -156,8 +156,9 @@ rawStorablePVar ::
      forall a m. (PrimMonad m, S.Storable a)
   => m (PVar m a)
 rawStorablePVar =
-  let I# size# = S.sizeOf (undefined :: a)
-   in primitive $ \s# ->
+  case S.sizeOf (undefined :: a) of
+    I# size# ->
+      primitive $ \s# ->
         case newPinnedByteArray# size# s# of
           (# s'#, mba# #) -> (# s'#, PVar mba# #)
 {-# INLINE rawStorablePVar #-}
@@ -171,11 +172,13 @@ rawAlignedStorablePVar ::
   => m (PVar m a)
 rawAlignedStorablePVar =
   let dummy = undefined :: a
-      I# size# = S.sizeOf dummy
-      I# align# = S.alignment dummy
-   in primitive $ \s# ->
-        case newAlignedPinnedByteArray# size# align# s# of
-          (# s'#, mba# #) -> (# s'#, PVar mba# #)
+   in case S.sizeOf dummy of
+        I# size# ->
+          case S.alignment dummy of
+            I# align# ->
+              primitive $ \s# ->
+                case newAlignedPinnedByteArray# size# align# s# of
+                  (# s'#, mba# #) -> (# s'#, PVar mba# #)
 {-# INLINE rawAlignedStorablePVar #-}
 
 

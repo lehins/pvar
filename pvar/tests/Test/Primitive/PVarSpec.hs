@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Test.Primitive.PVarSpec (spec) where
 
 import Control.Monad
@@ -73,6 +73,7 @@ data ByteArrayNonEmpty a =
 instance (Arbitrary a, Prim a) => Arbitrary (ByteArrayNonEmpty a) where
   arbitrary = genByteArrayNonEmpty (arbitrary :: Gen a)
 
+genByteArrayNonEmpty :: Prim a => Gen a -> Gen (ByteArrayNonEmpty a)
 genByteArrayNonEmpty gen = do
   Positive n <- arbitrary
   xs <- vectorOf n gen
@@ -184,7 +185,7 @@ specPrim defZero gen extraSpec =
             mba <- unsafeThawByteArray ba
             copyFromMutableByteArrayPVar mba i var
             readPVar var `shouldReturn` indexByteArray ba i
-      propPVarST "sizeOf" gen $ \a var -> pure (toPtrPVar var === Nothing)
+      propPVarST "sizeOf" gen $ \_ var -> pure (toPtrPVar var === Nothing)
     describe "Reset Memory" $
       propPVarIO "zeroPVar" gen $ \_ var -> do
         zeroPVar var
@@ -197,7 +198,7 @@ specStorable ::
   -> Spec
 specStorable gen =
   describe "Storable" $ do
-    propPVarIO "withPVarPtr (newPVar)" gen $ \a var ->
+    propPVarIO "withPVarPtr (newPVar)" gen $ \_ var ->
       withPtrPVar var pure `shouldReturn` Nothing
     prop "withPVarPtr (newPinnedPVar)" $
       forAllIO gen $ \a -> do
@@ -207,7 +208,7 @@ specStorable gen =
       forAllIO gen $ \a -> do
         var <- newAlignedPinnedPVar a
         fmap fromJust $ withPtrPVar var $ \ptr -> peek ptr `shouldReturn` a
-    propPVarIO "toForeignPtr (newPVar)" gen $ \a var ->
+    propPVarIO "toForeignPtr (newPVar)" gen $ \_ var ->
       toForeignPtrPVar var `shouldBe` Nothing
     prop "toForeignPtr (newPinnedPVar)" $
       forAllIO gen $ \a -> do
@@ -359,8 +360,7 @@ specAtomic = do
           mapConcurrently_ (af xvar) xs
           x' <- atomicReadIntPVar xvar
           yvar <- newPVar x
-          mapConcurrently_ (\y' -> atomicModifyIntPVar_ yvar (f y')) xs
-          -- mapConcurrently_ (atomicModifyIntPVar_ yvar . f) xs
+          mapConcurrently_ (atomicModifyIntPVar_ yvar . f) xs
           y' <- atomicReadIntPVar yvar
           x' `shouldBe` y'
     casProp gen name f af =
@@ -377,6 +377,7 @@ specAtomic = do
           y' <- atomicReadIntPVar yvar
           x' `shouldBe` y'
           F.foldl' f x' xs' `shouldBe` F.foldl' f x xs
+          F.foldl' f y' ys' `shouldBe` F.foldl' f x xs
 
 instance Arbitrary Int128 where
   arbitrary = Int128 <$> arbitrary <*> arbitrary

@@ -75,7 +75,7 @@ module Data.Primitive.PVar
 
 import Control.Monad (void)
 import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_,
-                                touch, primToPrim)
+                                touch)
 import Control.Monad.ST (ST, runST)
 import Data.Primitive.PVar.Internal
 import Data.Primitive.PVar.Unsafe
