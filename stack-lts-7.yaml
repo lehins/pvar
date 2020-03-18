@@ -1,4 +1,4 @@
-resolver: lts-10.10
+resolver: lts-7.24
 packages:
 - pvar
 extra-deps:
@@ -9,3 +9,6 @@ extra-deps:
 - hspec-discover-2.7.1@sha256:e8ce36741c06b41de58069814a7d3b7314bdeaab35ae573e3c924739011e0c29,2243
 - validity-0.9.0.3@sha256:ee12ebe4c09ecd52c1e36604da5ab00c17d4fc815a4d18e73f7fb2f9ba449f46,2612
 - genvalidity-0.9.1.0@sha256:46cc1deca49f5a9b16034b5a56732c821835e34865108a61fb821e6e7c04d4dd,2892
+- HUnit-1.6.0.0@sha256:8014b27c884becd8041214a1ab263fa92244ca62700a911aff604a1047869298,1570
+- hspec-expectations-0.8.2@sha256:e2db24881baadc2d9d23b03cb629e80dcbda89a6b04ace9adb5f4d02ef8b31aa,1594
+- quickcheck-io-0.2.0@sha256:7bf0b68fb90873825eb2e5e958c1b76126dcf984debb998e81673e6d837e0b2d,1133

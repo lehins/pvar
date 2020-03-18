@@ -1,6 +1,10 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UnboxedTuples #-}
+{-# LANGUAGE CPP #-}
+#if __GLASGOW_HASKELL__ >= 800
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+#endif
 -- |
 -- Module      : Data.Primitive.PVar
 -- Copyright   : (c) Alexey Kuleshevich 2020
@@ -68,6 +72,8 @@ module Data.Primitive.PVar
   , Prim
   , PrimMonad(PrimState)
   , RealWorld
+  , sizeOf
+  , alignment
   , ST
   , runST
   , S.Storable(peek, poke)
@@ -79,6 +85,7 @@ import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_,
 import Control.Monad.ST (ST, runST)
 import Data.Primitive.PVar.Internal
 import Data.Primitive.PVar.Unsafe
+import Data.Primitive (sizeOf, alignment)
 import Data.Primitive.Types
 import qualified Foreign.Storable as S
 import GHC.Exts

@@ -28,3 +28,5 @@ atomicModifyIntPVar :: PrimMonad m => PVar m Int -> (Int -> (Int, a)) -> m a
 
 * Works in `PrimMonad`, therfore usable with `ST`, `IO` and various transformer monads.
 * Easy access to `PVar` contents with `Storable`
+* `isByteArrayPinned`, `isMutableByteArrayPinned` function that work on ghc-7.10 and
+  ghc-8.0 as well as all the newer ones.

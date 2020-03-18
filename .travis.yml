@@ -27,18 +27,29 @@ matrix:
   # The Stack builds. We can pass in arbitrary Stack arguments via the ARGS
   # variable, such as using --stack-yaml to point to a different file.
 
-  # - env: RESOLVER="lts-12.26" STACK_YAML="stack-extra-deps.yaml"
-  #   compiler: ": #stack GHC-8.4.4 (lts-12.26)"
-  #   os: osx
+  - env: GHC="7.10.2" RESOLVER="lts-3.22" STACK_YAML="stack-lts-3.yaml"
+    compiler: ": #stack GHC-7.10.2 (lts-3.22)"
+    addons:
+      apt:
+        packages: [libgmp-dev]
 
-  # - env: RESOLVER="lts-14.27" STACK_YAML="stack-extra-deps.yaml"
-  #   compiler: ": #stack GHC-8.6.5 (lts-14.27)"
-  #   os: osx
+  - env: GHC="7.10.3" RESOLVER="lts-6.35" STACK_YAML="stack-lts-3.yaml"
+    compiler: ": #stack GHC-7.10.3 (lts-6.35)"
+    addons:
+      apt:
+        packages: [libgmp-dev]
 
-  # - env: RESOLVER="lts-15"
-  #   compiler: ": #stack GHC-8.8.2 (lts-15)"
-  #   os: osx
+  - env: GHC="8.0.1" RESOLVER="lts-7.24" STACK_YAML="stack-lts-7.yaml"
+    compiler: ": #stack GHC-8.0.1 (lts-7.27)"
+    addons:
+      apt:
+        packages: [libgmp-dev]
 
+  - env: GHC="8.0.2" RESOLVER="lts-8.24" STACK_YAML="stack-lts-7.yaml"
+    compiler: ": #stack GHC-8.0.2 (lts-8.27)"
+    addons:
+      apt:
+        packages: [libgmp-dev]
 
   - env: GHC="8.2.2" RESOLVER="lts-10.10" STACK_YAML="stack-lts-10.yaml"
     compiler: ": #stack GHC-8.2.2 (lts-10.10)"
@@ -82,14 +93,20 @@ matrix:
       apt:
         packages: [libgmp-dev]
 
-  - env: GHC="8.6.6" RESOLVER="lts-14.27" COVERALLS_STACK_YAML="stack.yaml"
+  - env: GHC="8.6.5" RESOLVER="lts-14.27" COVERALLS_STACK_YAML="stack.yaml"
     compiler: ": #stack GHC-8.6.5 (lts-14.27)"
     addons:
       apt:
         packages: [libgmp-dev]
 
-  - env: GHC="8.8.2" RESOLVER="lts-15"
-    compiler: ": #stack GHC-8.8.2 (lts-15)"
+  - env: GHC="8.8.2" RESOLVER="lts-15.3"
+    compiler: ": #stack GHC-8.8.2 (lts-15.3)"
+    addons:
+      apt:
+        packages: [libgmp-dev]
+
+  - env: GHC="8.8.3" RESOLVER="lts-15"
+    compiler: ": #stack GHC-8.8.3 (lts-15)"
     addons:
       apt:
         packages: [libgmp-dev]
@@ -111,7 +128,7 @@ before_install:
 - mkdir -p ~/.local/bin
 - |
   # script for restoring file modification times, so only changed modules get rebuilt
-  travis_retry curl -s -L https://gist.githubusercontent.com/lehins/fd36a8cc8bf853173437b17f6b6426ad/raw/d9ddb32cac2f0dc6800be4fa54d450f0dcda6c60/git-modtime.hs -o git-modtime.hs
+  travis_retry curl -s -L https://gist.githubusercontent.com/lehins/fd36a8cc8bf853173437b17f6b6426ad/raw/4702d0252731ad8b21317375e917124c590819ce/git-modtime.hs -o git-modtime.hs
   # get stack
   if [ "$TRAVIS_OS_NAME" = "osx" ]
   then
@@ -125,7 +142,7 @@ script:
   set -ex
   #while [ true ] ; do echo "Prevent death by Travis due to no output"; sleep 540; done &
   # Restore modification time for cache utilization and install all needed depndencies
-  stack script --resolver $RESOLVER git-modtime.hs
+  stack script --resolver $RESOLVER git-modtime.hs --package base --package time --package directory --package process
   ARGS="--resolver $RESOLVER"
   BUILD_ARGS="--bench --no-run-benchmarks --haddock --no-haddock-deps"
   if [ -n "${COVERALLS_STACK_YAML}" ] && [ -n "${COVERALLS_REPO_TOKEN}" ]; then
