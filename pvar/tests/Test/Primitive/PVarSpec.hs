@@ -201,13 +201,11 @@ specStorable gen =
     prop "withPVarPtr (newPinnedPVar)" $
       forAllIO gen $ \a -> do
         var <- newPinnedPVar a
-        fmap fromJust $
-          withPtrPVar var $ \ptr -> peek ptr `shouldReturn` a
+        fmap fromJust $ withPtrPVar var $ \ptr -> peek ptr `shouldReturn` a
     prop "withPVarPtr (newAlignedPinnedPVar)" $
       forAllIO gen $ \a -> do
         var <- newAlignedPinnedPVar a
-        fmap fromJust $
-          withPtrPVar var $ \ptr -> peek ptr `shouldReturn` a
+        fmap fromJust $ withPtrPVar var $ \ptr -> peek ptr `shouldReturn` a
     propPVarIO "toForeignPtr (newPVar)" gen $ \a var ->
       toForeignPtrPVar var `shouldBe` Nothing
     prop "toForeignPtr (newPinnedPVar)" $
@@ -235,6 +233,29 @@ specStorable gen =
       alloca $ \ptr -> do
         copyPVarToPtr var ptr
         peek ptr `shouldReturn` a
+    prop "withStorablePVarPtr" $
+      forAllIO gen $ \a ->
+        return $
+        forAllIO gen $ \b ->
+          withStorablePVar a $ \pvar ptr -> do
+            sizeOfPVar pvar `shouldBe` Storable.sizeOf a
+            a' <- peekPrim ptr
+            a' `shouldBe` a
+            pokePrim ptr b
+            b' <- readPVar pvar
+            b' `shouldBe` b
+    prop "withAlignedStorablePVarPtr" $
+      forAllIO gen $ \a ->
+        return $
+        forAllIO gen $ \b ->
+          withAlignedStorablePVar a $ \pvar ptr -> do
+            alignmentPVar pvar `shouldBe` Storable.alignment a
+            a' <- peekPrim ptr
+            a' `shouldBe` a
+            pokePrim ptr b
+            b' <- readPVar pvar
+            b' `shouldBe` b
+
 
 specAtomic :: Spec
 specAtomic = do

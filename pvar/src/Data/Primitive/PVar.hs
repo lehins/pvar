@@ -34,9 +34,16 @@ module Data.Primitive.PVar
   , sizeOfPVar
   , alignmentPVar
   -- * Pinned memory
+  --
+  -- In theory it is unsafe to mix `Storable` and `Prim` operations on the same chunk of
+  -- memory, because some instances can have differnet memory layouts for the same
+  -- type. This is highly uncommon in practice and if you are intermixing the two concepts
+  -- together you probably already know what you are doing.
   , newPinnedPVar
   , newAlignedPinnedPVar
   , withPtrPVar
+  , withStorablePVar
+  , withAlignedStorablePVar
   , copyPVarToPtr
   , toForeignPtrPVar
   , isPinnedPVar
@@ -70,7 +77,7 @@ module Data.Primitive.PVar
 
 import Control.Monad (void)
 import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_,
-                                touch)
+                                touch, primToPrim)
 import Control.Monad.ST (ST, runST)
 import Data.Primitive.PVar.Internal
 import Data.Primitive.PVar.Unsafe
@@ -112,7 +119,6 @@ toForeignPtrPVar pvar
   | isPinnedPVar pvar = Just $ unsafeToForeignPtrPVar pvar
   | otherwise = Nothing
 {-# INLINE toForeignPtrPVar #-}
-
 
 -- | Copy contents of one mutable variable `PVar` into another
 --
@@ -205,6 +211,40 @@ swapPVars_ pvar1 pvar2 = void $ swapPVars pvar1 pvar2
 -- (=%) :: (PrimMonad m, Prim a, Integral a) => PVar (PrimState m) a -> a -> m ()
 -- (=%) pvar a = modifyPVar_ pvar (`mod` a)
 -- {-# INLINE (=%) #-}
+
+
+
+
+-- | Apply an action to the newly allocated `PVar` and to the `Ptr` that references
+-- it. Memory allocated with number of bytes specified by @`S.sizeOf` a@ is allocated and
+-- pinned, therefore it is safe to operate directly with the pointer as well as over
+-- FFI. Returning the pointer from the supplied action would be very unsafe, therefore
+-- return the `PVar` if you still need it afterwards, garbage colelctor will cleanup the
+-- memory when it is no longer needed.
+--
+-- @since 0.1.0
+withStorablePVar ::
+     (PrimMonad m, S.Storable a)
+  => a -- ^ Initial value
+  -> (PVar (PrimState m) a -> Ptr a -> m b) -- ^ Action to run
+  -> m b
+withStorablePVar a f = do
+  pvar <- rawStorablePVar
+  runWithPokedPtr pvar a f
+{-# INLINE withStorablePVar #-}
+
+-- | Same `withStorablePVar`, except memory is aligned according to `S.alignment`.
+--
+-- @since 0.1.0
+withAlignedStorablePVar ::
+     (PrimMonad m, S.Storable a)
+  => a -- ^ Initial value
+  -> (PVar (PrimState m) a -> Ptr a -> m b) -- ^ Action to run
+  -> m b
+withAlignedStorablePVar a f = do
+  pvar <- rawAlignedStorablePVar
+  runWithPokedPtr pvar a f
+{-# INLINE withAlignedStorablePVar #-}
 
 
 -- | Create a new `PVar` in pinned memory with an initial value in it aligned on the size of

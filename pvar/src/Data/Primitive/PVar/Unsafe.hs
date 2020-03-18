@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE MagicHash #-}
+{-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 -- |
 -- Module      : Data.Primitive.PVar.Unsafe
@@ -11,18 +12,30 @@
 --
 module Data.Primitive.PVar.Unsafe
   ( PVar(..)
+  -- * Creation
+  , rawPVar
+  , rawPinnedPVar
+  , rawAlignedPinnedPVar
+  , rawStorablePVar
+  , rawAlignedStorablePVar
+  -- * Access
+  , peekPrim
+  , pokePrim
+  -- * Conversion
   , toPtrPVar
   , unsafeToPtrPVar
   , unsafeToForeignPtrPVar
+  -- * Reset
   , zeroPVar
   -- * Unpacked opartions
   , sizeOfPVar#
   , alignmentPVar#
   , setPVar#
+  -- * ByteArray
   -- ** Atomic operations
   , atomicModifyIntArray#
   , atomicModifyIntArray_#
-  -- * Interoperability with `ByteArray`
+  -- ** Memory copying
   , copyFromByteArrayPVar
   , copyFromMutableByteArrayPVar
   , copyPVarToMutableByteArray
@@ -32,7 +45,7 @@ module Data.Primitive.PVar.Unsafe
   )
   where
 
-import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_)
+import Control.Monad.Primitive (PrimMonad(primitive), PrimState, touch,  primitive_)
 import Data.Primitive.PVar.Internal
 import Data.Primitive.ByteArray
 import Data.Primitive.Types
@@ -42,13 +55,6 @@ import GHC.ForeignPtr
 import Data.Typeable
 
 
--- | Get the address to the contents. This is highly unsafe, espcially if memory is not pinned
---
--- @since 0.1.0
-unsafeToPtrPVar :: PVar s a -> Ptr a
-unsafeToPtrPVar (PVar mba#) = Ptr (byteArrayContents# (unsafeCoerce# mba#))
-{-# INLINE unsafeToPtrPVar #-}
-
 -- | Convert `PVar` into a `ForeignPtr`, very unsafe if not backed by pinned memory.
 --
 -- @since 0.1.0
@@ -57,6 +63,7 @@ unsafeToForeignPtrPVar pvar@(PVar mba#) =
   case unsafeToPtrPVar pvar of
     Ptr addr# -> ForeignPtr addr# (PlainPtr mba#)
 {-# INLINE unsafeToForeignPtrPVar #-}
+
 
 
 -- | Extract the address to the mutable variable, but only if it is backed by pinned
@@ -183,5 +190,6 @@ copyBytesFromMutableByteArrayPVar (MutableByteArray mbas#) (I# offset#) pvar@(PV
 {-# INLINE copyBytesFromMutableByteArrayPVar #-}
 
 
+-- | Show the type name
 showsType :: Typeable t => proxy t -> ShowS
 showsType = showsTypeRep . typeRep

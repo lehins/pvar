@@ -17,6 +17,15 @@ module Data.Primitive.PVar.Internal
   , newPVar
   , newPinnedPVar
   , newAlignedPinnedPVar
+  , rawPVar
+  , rawPinnedPVar
+  , rawAlignedPinnedPVar
+  , rawStorablePVar
+  , rawAlignedStorablePVar
+  , unsafeToPtrPVar
+  , runWithPokedPtr
+  , peekPrim
+  , pokePrim
   , readPVar
   , writePVar
   , isPinnedPVar
@@ -33,11 +42,12 @@ module Data.Primitive.PVar.Internal
   )
   where
 
-import GHC.Exts
-import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_, touch)
+import Control.DeepSeq
+import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_,
+                                touch, unsafePrimToPrim)
 import Data.Primitive.Types
 import qualified Foreign.Storable as S
-import Control.DeepSeq
+import GHC.Exts
 
 -- | Mutable variable with primitive value.
 --
@@ -70,32 +80,140 @@ instance NFData (PVar s a) where
 --
 -- @since 0.1.0
 newPVar :: (PrimMonad m, Prim a) => a -> m (PVar (PrimState m) a)
-newPVar v =
-  primitive $ \s# ->
-    case newByteArray# 1# s# of
-      (# s'#, mba# #) -> (# writeByteArray# mba# 0# v s'#, PVar mba# #)
+newPVar v = do
+  pvar <- rawPVar
+  writePVar pvar v
+  return pvar
 {-# INLINE newPVar #-}
+
+-- | Create a mutable variable in unpinned and unititialized memory
+--
+-- @since 0.1.0
+rawPVar ::
+     forall a m. (PrimMonad m, Prim a)
+  => m (PVar (PrimState m) a)
+rawPVar =
+  primitive $ \s# ->
+    case newByteArray# (sizeOf# (undefined :: a)) s# of
+      (# s'#, mba# #) -> (# s'#, PVar mba# #)
+{-# INLINE rawPVar #-}
+
 
 -- | Create a mutable variable in pinned memory with an initial value.
 --
 -- @since 0.1.0
 newPinnedPVar :: (PrimMonad m, Prim a) => a -> m (PVar (PrimState m) a)
-newPinnedPVar v =
-  primitive $ \s# ->
-    case newPinnedByteArray# 1# s# of
-      (# s'#, mba# #) -> (# writeByteArray# mba# 0# v s'#, PVar mba# #)
+newPinnedPVar v = do
+  pvar <- rawPinnedPVar
+  writePVar pvar v
+  return pvar
 {-# INLINE newPinnedPVar #-}
+
+-- | Create a mutable variable in pinned memory with uninitialized memory.
+--
+-- @since 0.1.0
+rawPinnedPVar ::
+     forall a m. (PrimMonad m, Prim a)
+  => m (PVar (PrimState m) a)
+rawPinnedPVar =
+  primitive $ \s# ->
+    case newPinnedByteArray# (sizeOf# (undefined :: a)) s# of
+      (# s'#, mba# #) -> (# s'#, PVar mba# #)
+{-# INLINE rawPinnedPVar #-}
+
 
 -- | Create a mutable variable in pinned memory with an initial value and aligned
 -- according to its `Data.Primitive.Types.alignment`
 --
 -- @since 0.1.0
 newAlignedPinnedPVar :: (PrimMonad m, Prim a) => a -> m (PVar (PrimState m) a)
-newAlignedPinnedPVar v =
-  primitive $ \s# ->
-    case newAlignedPinnedByteArray# 1# (alignment# v) s# of
-      (# s'#, mba# #) -> (# writeByteArray# mba# 0# v s'#, PVar mba# #)
+newAlignedPinnedPVar v = do
+  pvar <- rawAlignedPinnedPVar
+  writePVar pvar v
+  return pvar
 {-# INLINE newAlignedPinnedPVar #-}
+
+
+-- | Create a mutable variable in pinned uninitialized memory.
+--
+-- @since 0.1.0
+rawAlignedPinnedPVar ::
+     forall a m. (PrimMonad m, Prim a)
+  => m (PVar (PrimState m) a)
+rawAlignedPinnedPVar =
+  let dummy = undefined :: a
+   in primitive $ \s# ->
+        case newAlignedPinnedByteArray# (sizeOf# dummy) (alignment# dummy) s# of
+          (# s'#, mba# #) -> (# s'#, PVar mba# #)
+{-# INLINE rawAlignedPinnedPVar #-}
+
+-- | Create a mutable variable in pinned uninitialized memory using Storable interface for
+-- getting the number of bytes for memory allocation.
+--
+-- @since 0.1.0
+rawStorablePVar ::
+     forall a m. (PrimMonad m, S.Storable a)
+  => m (PVar (PrimState m) a)
+rawStorablePVar =
+  let I# size# = S.sizeOf (undefined :: a)
+   in primitive $ \s# ->
+        case newPinnedByteArray# size# s# of
+          (# s'#, mba# #) -> (# s'#, PVar mba# #)
+{-# INLINE rawStorablePVar #-}
+
+-- | Create a mutable variable in pinned uninitialized memory using Storable interface for
+-- getting the number of bytes for memory allocation and alignement.
+--
+-- @since 0.1.0
+rawAlignedStorablePVar ::
+     forall a m. (PrimMonad m, S.Storable a)
+  => m (PVar (PrimState m) a)
+rawAlignedStorablePVar =
+  let dummy = undefined :: a
+      I# size# = S.sizeOf dummy
+      I# align# = S.alignment dummy
+   in primitive $ \s# ->
+        case newAlignedPinnedByteArray# size# align# s# of
+          (# s'#, mba# #) -> (# s'#, PVar mba# #)
+{-# INLINE rawAlignedStorablePVar #-}
+
+
+-- | Get the address to the contents. This is highly unsafe, espcially if memory is not pinned
+--
+-- @since 0.1.0
+unsafeToPtrPVar :: PVar s a -> Ptr a
+unsafeToPtrPVar (PVar mba#) = Ptr (byteArrayContents# (unsafeCoerce# mba#))
+{-# INLINE unsafeToPtrPVar #-}
+
+-- helper that filles the PVar before running the action
+runWithPokedPtr ::
+     (S.Storable a, PrimMonad m)
+  => PVar (PrimState m) a
+  -> a
+  -> (PVar (PrimState m) a -> Ptr a -> m b)
+  -> m b
+runWithPokedPtr pvar a f = do
+  let ptr = unsafeToPtrPVar pvar
+  pokePrim ptr a
+  r <- f pvar ptr
+  touch pvar
+  return r
+{-# INLINE runWithPokedPtr #-}
+
+
+-- | Use `S.Storable` wrting functionality inside `PrimMonad`.
+--
+-- @since 0.1.0
+peekPrim :: (S.Storable a, PrimMonad m) => Ptr a -> m a
+peekPrim = unsafePrimToPrim . S.peek
+{-# INLINE peekPrim #-}
+
+-- | Use `S.Storable` wrting functionality inside `PrimMonad`
+--
+-- @since 0.1.0
+pokePrim :: (S.Storable a, PrimMonad m) => Ptr a -> a -> m ()
+pokePrim ptr = unsafePrimToPrim . S.poke ptr
+{-# INLINE pokePrim #-}
 
 -- | Read a value from a mutable variable
 --
@@ -175,7 +293,7 @@ atomicModifyIntArray# mba# i# f s0# =
               (# s'#, o'# #) ->
                 case o# ==# o'# of
                   0# -> go s# o'#
-                  _ -> seq# artifact s'#
+                  _  -> seq# artifact s'#
    in case atomicReadIntArray# mba# i# s0# of
         (# s'#, o# #) -> go s'# o#
 {-# INLINE atomicModifyIntArray# #-}
@@ -213,7 +331,7 @@ atomicModifyIntArray_# mba# i# f s0# =
           (# s'#, o'# #) ->
             case o# ==# o'# of
               0# -> go s# o'#
-              _ -> s'#
+              _  -> s'#
    in case atomicReadIntArray# mba# i# s0# of
         (# s'#, o# #) -> go s'# o#
 {-# INLINE atomicModifyIntArray_# #-}
