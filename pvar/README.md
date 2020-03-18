@@ -17,13 +17,13 @@ Interface for a mutable veriable `PVar` that can hold values that have `Prim` in
 Main features include:
 
 * Perfomance. There is practically no overhead when compared to operating on pure values,
-  wlthough there is a higher memory overhead, since `PVar` is backed by a
+  although there is a higher memory overhead, since `PVar` is backed by a
   `MutableByteArray#`
 * Atomic operations for `PVar`s with `Int` values. This includes a unique function that is
   not availiable in `ghc-prim` out of the box:
 
 ```haskell
-atomicModifyIntPVar :: PrimMonad m => PVar m Int -> (Int -> (Int, a)) -> m a`
+atomicModifyIntPVar :: PrimMonad m => PVar m Int -> (Int -> (Int, a)) -> m a
 ```
 
 * Works in `PrimMonad`, therfore usable with `ST`, `IO` and various transformer monads.
