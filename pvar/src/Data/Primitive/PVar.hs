@@ -72,6 +72,8 @@ module Data.Primitive.PVar
   , Prim
   , PrimMonad(PrimState)
   , RealWorld
+  , sizeOf
+  , alignment
   , ST
   , runST
   , S.Storable(peek, poke)
@@ -83,6 +85,7 @@ import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_,
 import Control.Monad.ST (ST, runST)
 import Data.Primitive.PVar.Internal
 import Data.Primitive.PVar.Unsafe
+import Data.Primitive (sizeOf, alignment)
 import Data.Primitive.Types
 import qualified Foreign.Storable as S
 import GHC.Exts

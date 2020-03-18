@@ -3,17 +3,19 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Test.Primitive.PVarSpec (spec) where
 
-import Control.Monad
 import Control.Concurrent.Async
 import Control.DeepSeq
+import Control.Monad
+import Data.Bits
+import Data.Foldable as F
 import Data.GenValidity
 import Data.Int
-import Data.Bits
-import Data.List (partition, intercalate)
-import Data.Foldable as F
+import Data.List (intercalate, partition)
 import Data.Maybe
-import Data.Primitive (sizeOf, alignment)
-import Data.Primitive.ByteArray
+import Data.Primitive.ByteArray (ByteArray, indexByteArray, newByteArray,
+                                 newPinnedByteArray, readByteArray,
+                                 sizeofByteArray, unsafeFreezeByteArray,
+                                 unsafeThawByteArray, writeByteArray)
 import Data.Primitive.PVar
 import Data.Primitive.PVar.Unsafe as Unsafe
 import Data.Typeable
@@ -188,16 +190,12 @@ specPrim defZero gen extraSpec =
             (===) <$> readByteArray mba i <*> readPVar var
       propPVarIO "copyFromByteArrayPVar" gen $ \_ var ->
         return $
-        forAll (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) ->
-          monadicIO $
-          run $ do
+        forAllIO (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) -> do
             copyFromByteArrayPVar ba i var
             readPVar var `shouldReturn` indexByteArray ba i
       propPVarIO "copyFromMutableByteArrayPVar" gen $ \_ var ->
         return $
-        forAll (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) ->
-          monadicIO $
-          run $ do
+        forAllIO (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) -> do
             mba <- unsafeThawByteArray ba
             copyFromMutableByteArrayPVar mba i var
             readPVar var `shouldReturn` indexByteArray ba i
@@ -206,6 +204,25 @@ specPrim defZero gen extraSpec =
       propPVarIO "zeroPVar" gen $ \_ var -> do
         zeroPVar var
         readPVar var `shouldReturn` defZero
+    describe "Pinned Memory" $ do
+      it "isByteArrayPinned - Unpinned" $
+        forAllIO arbitrary $ \(Positive n) -> do
+          mba <- newByteArray n
+          ba <- unsafeFreezeByteArray mba
+          return $ not $ isByteArrayPinned ba
+      it "isByteArrayPinned - Pinned" $
+        forAllIO arbitrary $ \(Positive n) -> do
+          mba <- newPinnedByteArray n
+          ba <- unsafeFreezeByteArray mba
+          return $ isByteArrayPinned ba
+      it "isMutableByteArrayPinned - Unpinned" $
+        forAllIO arbitrary $ \(Positive n) -> do
+          mba <- newByteArray n
+          return $ not $ isMutableByteArrayPinned mba
+      it "isMutableByteArrayPinned - Pinned" $
+        forAllIO arbitrary $ \(Positive n) -> do
+          mba <- newPinnedByteArray n
+          return $ isMutableByteArrayPinned mba
     extraSpec gen
 
 specStorable ::

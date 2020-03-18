@@ -1,6 +1,4 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE MagicHash #-}
-{-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 -- |
 -- Module      : Data.Primitive.PVar.Unsafe
@@ -39,6 +37,12 @@ module Data.Primitive.PVar.Unsafe
   , copyFromByteArrayPVar
   , copyFromMutableByteArrayPVar
   , copyPVarToMutableByteArray
+  -- ** Check if memory is pinned
+  , isByteArrayPinned
+  , isMutableByteArrayPinned
+  -- *** Primitive versions
+  , isByteArrayPinned#
+  , isMutableByteArrayPinned#
   -- * Helpers
   , showsType
   , unI#
@@ -47,7 +51,7 @@ module Data.Primitive.PVar.Unsafe
 
 import Control.Monad.Primitive (PrimMonad, PrimState, primitive_)
 import Data.Primitive.PVar.Internal
-import Data.Primitive.ByteArray
+import Data.Primitive.ByteArray (ByteArray(..), MutableByteArray(..))
 import Data.Primitive.Types
 import GHC.Exts as Exts
 import GHC.ForeignPtr
@@ -192,3 +196,24 @@ copyBytesFromMutableByteArrayPVar (MutableByteArray mbas#) (I# offset#) pvar@(PV
 -- | Show the type name
 showsType :: Typeable t => proxy t -> ShowS
 showsType = showsTypeRep . typeRep
+
+
+-- | Check whether or not the `ByteArray` is pinned.
+--
+-- /__Note__/ - This function uses GHC built-in functions for GHC 8.2 and newer, but for older
+-- versions it fallsback onto custom implementation.
+--
+--  @since 0.1.1
+isByteArrayPinned :: ByteArray -> Bool
+isByteArrayPinned (ByteArray arr#) = isTrue# (isByteArrayPinned# arr#)
+{-# INLINE isByteArrayPinned #-}
+
+-- | Check whether or not the `MutableByteArray` is pinned.
+--
+-- /__Note__/ - This function uses GHC built-in functions for GHC 8.2 and newer, but for older
+-- versions it fallsback onto custom implementation.
+--
+--  @since 0.1.1
+isMutableByteArrayPinned :: MutableByteArray s -> Bool
+isMutableByteArrayPinned (MutableByteArray marr#) = isTrue# (isMutableByteArrayPinned# marr#)
+{-# INLINE isMutableByteArrayPinned #-}
