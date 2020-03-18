@@ -11,7 +11,7 @@ import Data.Foldable as F
 import Data.GenValidity
 import Data.Int
 import Data.List (intercalate, partition)
-import Data.Maybe
+--import Data.Maybe
 import Data.Primitive.ByteArray (ByteArray, indexByteArray, newByteArray,
                                  newPinnedByteArray, readByteArray,
                                  sizeofByteArray, unsafeFreezeByteArray,
@@ -236,11 +236,13 @@ specStorable gen =
     prop "withPVarPtr (newPinnedPVar)" $
       forAllIO gen $ \a -> do
         var <- newPinnedPVar a
-        fmap fromJust $ withPtrPVar var $ \ptr -> peek ptr `shouldReturn` a
+        maybe (error "Expected to get a Just Ptr") pure =<<
+          withPtrPVar var (\ptr -> peek ptr `shouldReturn` a)
     prop "withPVarPtr (newAlignedPinnedPVar)" $
       forAllIO gen $ \a -> do
         var <- newAlignedPinnedPVar a
-        fmap fromJust $ withPtrPVar var $ \ptr -> peek ptr `shouldReturn` a
+        maybe (error "Expected to get a Just Ptr") pure =<<
+          withPtrPVar var (\ptr -> peek ptr `shouldReturn` a)
     propPVarIO "toForeignPtr (newPVar)" gen $ \_ var ->
       toForeignPtrPVar var `shouldBe` Nothing
     prop "toForeignPtr (newPinnedPVar)" $
