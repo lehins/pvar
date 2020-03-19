@@ -142,7 +142,7 @@ script:
   set -ex
   #while [ true ] ; do echo "Prevent death by Travis due to no output"; sleep 540; done &
   # Restore modification time for cache utilization and install all needed depndencies
-  stack script --resolver $RESOLVER git-modtime.hs
+  stack script --resolver $RESOLVER git-modtime.hs --package base --package time --package directory --package process
   ARGS="--resolver $RESOLVER"
   BUILD_ARGS="--bench --no-run-benchmarks --haddock --no-haddock-deps"
   if [ -n "${COVERALLS_STACK_YAML}" ] && [ -n "${COVERALLS_REPO_TOKEN}" ]; then
