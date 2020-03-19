@@ -128,7 +128,7 @@ before_install:
 - mkdir -p ~/.local/bin
 - |
   # script for restoring file modification times, so only changed modules get rebuilt
-  travis_retry curl -s -L https://gist.githubusercontent.com/lehins/fd36a8cc8bf853173437b17f6b6426ad/raw/f3a99851c521493438f6557e11cfbc86ca51c060/git-modtime.hs -o git-modtime.hs
+  travis_retry curl -s -L https://gist.githubusercontent.com/lehins/fd36a8cc8bf853173437b17f6b6426ad/raw/4702d0252731ad8b21317375e917124c590819ce/git-modtime.hs -o git-modtime.hs
   # get stack
   if [ "$TRAVIS_OS_NAME" = "osx" ]
   then
