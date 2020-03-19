@@ -6,7 +6,7 @@ Interface for a mutable veriable `PVar` that can hold values that have `Prim` in
 
 | Language | Travis | Azure | Coveralls |
 |:--------:|:------:|:-----:|:---------:|
-| ![GitHub top language](https://img.shields.io/github/languages/top/lehins/pvar.svg) | [![Travis](https://img.shields.io/travis/lehins/pvar/master.svg?label=Linux%20%26%20OS%20X)](https://travis-ci.org/lehins/pvar) | [![Build Status](https://dev.azure.com/kuleshevich/pvar/_apis/build/status/pvar?branchName=master)](https://dev.azure.com/kuleshevich/pvar/_build/latest?definitionId=1?branchName=master) | [![Coverage Status](https://coveralls.io/repos/github/lehins/pvar/badge.svg?branch=master)](https://coveralls.io/github/lehins/pvar?branch=master)
+| ![GitHub top language](https://img.shields.io/github/languages/top/lehins/pvar.svg) | [![Travis](https://img.shields.io/travis/lehins/pvar/master.svg?label=Linux%20%26%20OS%20X)](https://travis-ci.org/lehins/pvar) | [![Build Status](https://dev.azure.com/kuleshevich/pvar/_apis/build/status/lehins.pvar?branchName=master)](https://dev.azure.com/kuleshevich/pvar/_build/latest?definitionId=1?branchName=master) | [![Coverage Status](https://coveralls.io/repos/github/lehins/pvar/badge.svg?branch=master)](https://coveralls.io/github/lehins/pvar?branch=master)
 
 |      Package       | Hackage | Nightly | LTS |
 |:-------------------|:-------:|:-------:|:---:|
