@@ -190,34 +190,52 @@ specPrim defZero gen extraSpec =
       propPVarIO "copyFromByteArrayPVar" gen $ \_ var ->
         return $
         forAllIO (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) -> do
-            copyFromByteArrayPVar ba i var
-            readPVar var `shouldReturn` indexByteArray ba i
+          copyFromByteArrayPVar ba i var
+          readPVar var `shouldReturn` indexByteArray ba i
       propPVarIO "copyFromMutableByteArrayPVar" gen $ \_ var ->
         return $
         forAllIO (genByteArrayNonEmpty gen) $ \(ByteArrayNonEmpty i ba) -> do
-            mba <- unsafeThawByteArray ba
-            copyFromMutableByteArrayPVar mba i var
-            readPVar var `shouldReturn` indexByteArray ba i
+          mba <- unsafeThawByteArray ba
+          copyFromMutableByteArrayPVar mba i var
+          readPVar var `shouldReturn` indexByteArray ba i
       propPVarST "sizeOf" gen $ \_ var -> pure (toPtrPVar var === Nothing)
     describe "Reset Memory" $
       propPVarIO "zeroPVar" gen $ \_ var -> do
         zeroPVar var
         readPVar var `shouldReturn` defZero
     describe "Pinned Memory" $ do
+      let mostThreshold = 3248
+          leastThreshold = 3249
+          -- Documented to be 3277, but seems to be different in practice.
+          -- https://gitlab.haskell.org/ghc/ghc/-/blob/feb852e67e166f752c783978f5fecc3c28c966f9/docs/users_guide/ffi-chap.rst#L1008
+      it "Small - Unpinned" $ do
+        mba <- newByteArray mostThreshold
+        isMutableByteArrayPinned mba `shouldBe` False
+        ba <- unsafeFreezeByteArray mba
+        isByteArrayPinned ba `shouldBe` False
+      it "Large - Pinned" $ do
+        mba <- newByteArray leastThreshold
+        isMutableByteArrayPinned mba `shouldBe` True
+        ba <- unsafeFreezeByteArray mba
+        isByteArrayPinned ba `shouldBe` True
       it "isByteArrayPinned - Unpinned" $
-        forAllIO arbitrary $ \(Positive n) -> do
-          mba <- newByteArray n
-          ba <- unsafeFreezeByteArray mba
-          return $ not $ isByteArrayPinned ba
+        forAll arbitrary $ \(Positive n) ->
+          (n <= mostThreshold) ==> monadicIO $
+          run $ do
+            mba <- newByteArray n
+            ba <- unsafeFreezeByteArray mba
+            return $ not $ isByteArrayPinned ba
       it "isByteArrayPinned - Pinned" $
         forAllIO arbitrary $ \(Positive n) -> do
           mba <- newPinnedByteArray n
           ba <- unsafeFreezeByteArray mba
           return $ isByteArrayPinned ba
       it "isMutableByteArrayPinned - Unpinned" $
-        forAllIO arbitrary $ \(Positive n) -> do
-          mba <- newByteArray n
-          return $ not $ isMutableByteArrayPinned mba
+        forAll arbitrary $ \(Positive n) ->
+          n <= mostThreshold ==> monadicIO $
+          run $ do
+            mba <- newByteArray n
+            return $ not $ isMutableByteArrayPinned mba
       it "isMutableByteArrayPinned - Pinned" $
         forAllIO arbitrary $ \(Positive n) -> do
           mba <- newPinnedByteArray n

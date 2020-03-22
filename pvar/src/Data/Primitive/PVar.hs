@@ -232,7 +232,7 @@ swapPVars_ pvar1 pvar2 = void $ swapPVars pvar1 pvar2
 -- it. Memory allocated with number of bytes specified by @`S.sizeOf` a@ is allocated and
 -- pinned, therefore it is safe to operate directly with the pointer as well as over
 -- FFI. Returning the pointer from the supplied action would be very unsafe, therefore
--- return the `PVar` if you still need it afterwards, garbage colelctor will cleanup the
+-- return the `PVar` if you still need it afterwards, garbage collector will cleanup the
 -- memory when it is no longer needed.
 --
 -- @since 0.1.0
