@@ -269,7 +269,9 @@ alignmentPVar :: Prim a => PVar m a -> Int
 alignmentPVar pvar = I# (alignmentPVar# pvar)
 {-# INLINE alignmentPVar #-}
 
-
+-- | Unwrap the primitive `Int`
+--
+-- @since 0.1.0
 unI# :: Int -> Int#
 unI# (I# i#) = i#
 {-# INLINE unI# #-}

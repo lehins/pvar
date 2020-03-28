@@ -279,8 +279,8 @@ atomicWriteIntPVar (PVar mba#) a = primitive_ (atomicWriteIntArray# mba# 0# (unI
 {-# INLINE atomicWriteIntPVar #-}
 
 
--- | Compare and swap. This is a function that is used to implement `modifyIntPVar`. Implies a
--- full memory barrier.
+-- | Compare and swap. This is also a function that is used to implement
+-- `atomicModifyIntPVar`. Implies a full memory barrier.
 --
 -- @since 0.1.0
 casIntPVar ::
@@ -297,7 +297,7 @@ casIntPVar (PVar mba#) old new =
 
 
 
--- | Add two numbers, corresponds to @`+`@ done atomically. Returns the previous value of
+-- | Add two numbers, corresponds to @(`+`)@ done atomically. Returns the previous value of
 -- the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
@@ -308,7 +308,7 @@ atomicAddIntPVar (PVar mba#) a =
       (# s'#, p# #) -> (# s'#, I# p# #)
 {-# INLINE atomicAddIntPVar #-}
 
--- | Subtract two numbers, corresponds to @`subtract`@ done atomically. Returns the
+-- | Subtract two numbers, corresponds to @(`-`)@ done atomically. Returns the
 -- previous value of the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
@@ -320,7 +320,7 @@ atomicSubIntPVar (PVar mba#) a =
 {-# INLINE atomicSubIntPVar #-}
 
 
--- | Binary conjuction (AND), corresponds to @`and`@ done atomically. Returns the previous
+-- | Binary conjuction (AND), corresponds to @(`Data.Bits..&.`)@ done atomically. Returns the previous
 -- value of the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
@@ -332,8 +332,8 @@ atomicAndIntPVar (PVar mba#) a =
 {-# INLINE atomicAndIntPVar #-}
 
 
--- | Binary negation of conjuction (Not AND), corresponds to @\\x y -> `complement` (x
--- `and` y)@ done atomically. Returns the previous value of the mutable variable. Implies
+-- | Binary negation of conjuction (Not AND), corresponds to @\\x y -> `Data.Bits.complement` (x
+-- `Data.Bits..&.` y)@ done atomically. Returns the previous value of the mutable variable. Implies
 -- a full memory barrier.
 --
 -- @since 0.1.0
@@ -345,7 +345,7 @@ atomicNandIntPVar (PVar mba#) a =
 {-# INLINE atomicNandIntPVar #-}
 
 
--- | Binary disjunction (OR), corresponds to `or` done atomically. Returns the previous
+-- | Binary disjunction (OR), corresponds to `(`Data.Bits..|.)` done atomically. Returns the previous
 -- value of the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
@@ -357,7 +357,7 @@ atomicOrIntPVar (PVar mba#) a =
 {-# INLINE atomicOrIntPVar #-}
 
 
--- | Binary exclusive disjunction (XOR), corresponds to `xor` done atomically. Returns the
+-- | Binary exclusive disjunction (XOR), corresponds to `Data.Bits.xor` done atomically. Returns the
 -- previous value of the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
@@ -369,7 +369,7 @@ atomicXorIntPVar (PVar mba#) a =
 {-# INLINE atomicXorIntPVar #-}
 
 
--- | Binary negation (NOT), corresponds to ones' `complement` done atomically. Returns the
+-- | Binary negation (NOT), corresponds to ones' `Data.Bits.complement` done atomically. Returns the
 -- previous value of the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0

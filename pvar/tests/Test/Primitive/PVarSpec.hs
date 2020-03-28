@@ -214,30 +214,32 @@ specPrim defZero gen extraSpec =
         ba <- unsafeFreezeByteArray mba
         isByteArrayPinned ba `shouldBe` False
       it "Large - Pinned" $ do
-        mba <- newByteArray leastThreshold
-        isMutableByteArrayPinned mba `shouldBe` True
-        ba <- unsafeFreezeByteArray mba
-        isByteArrayPinned ba `shouldBe` True
+        forAllIO arbitrary $ \(NonNegative n) -> do
+          let n' = n + leastThreshold
+          mba <- newByteArray n'
+          isMutableByteArrayPinned mba `shouldBe` True
+          ba <- unsafeFreezeByteArray mba
+          isByteArrayPinned ba `shouldBe` True
       it "isByteArrayPinned - Unpinned" $
-        forAll arbitrary $ \(Positive n) ->
+        forAll arbitrary $ \(NonNegative n) ->
           (n <= mostThreshold) ==> monadicIO $
           run $ do
             mba <- newByteArray n
             ba <- unsafeFreezeByteArray mba
             return $ not $ isByteArrayPinned ba
       it "isByteArrayPinned - Pinned" $
-        forAllIO arbitrary $ \(Positive n) -> do
+        forAllIO arbitrary $ \(NonNegative n) -> do
           mba <- newPinnedByteArray n
           ba <- unsafeFreezeByteArray mba
           return $ isByteArrayPinned ba
       it "isMutableByteArrayPinned - Unpinned" $
-        forAll arbitrary $ \(Positive n) ->
+        forAll arbitrary $ \(NonNegative n) ->
           n <= mostThreshold ==> monadicIO $
           run $ do
             mba <- newByteArray n
             return $ not $ isMutableByteArrayPinned mba
       it "isMutableByteArrayPinned - Pinned" $
-        forAllIO arbitrary $ \(Positive n) -> do
+        forAllIO arbitrary $ \(NonNegative n) -> do
           mba <- newPinnedByteArray n
           return $ isMutableByteArrayPinned mba
     extraSpec gen
