@@ -345,7 +345,7 @@ atomicNandIntPVar (PVar mba#) a =
 {-# INLINE atomicNandIntPVar #-}
 
 
--- | Binary disjunction (OR), corresponds to `(`Data.Bits..|.)` done atomically. Returns the previous
+-- | Binary disjunction (OR), corresponds to @(`Data.Bits..|.`)@ done atomically. Returns the previous
 -- value of the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
@@ -357,7 +357,7 @@ atomicOrIntPVar (PVar mba#) a =
 {-# INLINE atomicOrIntPVar #-}
 
 
--- | Binary exclusive disjunction (XOR), corresponds to `Data.Bits.xor` done atomically. Returns the
+-- | Binary exclusive disjunction (XOR), corresponds to @`Data.Bits.xor`@ done atomically. Returns the
 -- previous value of the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
@@ -369,7 +369,7 @@ atomicXorIntPVar (PVar mba#) a =
 {-# INLINE atomicXorIntPVar #-}
 
 
--- | Binary negation (NOT), corresponds to ones' `Data.Bits.complement` done atomically. Returns the
+-- | Binary negation (NOT), corresponds to ones' @`Data.Bits.complement`@ done atomically. Returns the
 -- previous value of the mutable variable. Implies a full memory barrier.
 --
 -- @since 0.1.0
