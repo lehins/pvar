@@ -1,6 +1,6 @@
 # pvar
 
-Interface for a mutable veriable `PVar` that can hold values that have `Prim` instance.
+Interface for a mutable variable `PVar` that can hold values that have `Prim` instance.
 
 ## Status
 
