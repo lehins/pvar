@@ -14,8 +14,8 @@
 -- Portability : non-portable
 --
 module Data.Primitive.PVar
-  ( -- | `PVar` has significantly better performance characterisitcs over
-    -- `Data.IORef.IORef`, `Data.STRef.STRef` and `Data.Primtive.MutVar.MutVar`. This is
+  ( -- | `PVar` has significantly better performance characteristics over
+    -- `Data.IORef.IORef`, `Data.STRef.STRef` and `Data.Primitive.MutVar.MutVar`. This is
     -- because value is mutated directly in memory instead of following an extra
     -- pointer. Besides better performance there is another consequence of direct
     -- mutation, namely the value is always evaluated to normal form when being written
@@ -98,7 +98,7 @@ import GHC.ForeignPtr
 
 -- $pinned
 -- In theory it is unsafe to mix `S.Storable` and `Prim` operations on the same chunk of
--- memory, because some instances can have differnet memory layouts for the same
+-- memory, because some instances can have different memory layouts for the same
 -- type. This is highly uncommon in practice and if you are intermixing the two concepts
 -- together you probably already know what you are doing.
 
