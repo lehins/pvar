@@ -131,25 +131,43 @@ specPrim defZero gen extraSpec =
     propPVarIO "newAlignedPinnedPVar" gen $ \a var -> do
       pinnedVar <- newAlignedPinnedPVar a
       (===) <$> readPVar var <*> readPVar pinnedVar
-    propPVarIO "modifyPVar" gen $ \a pvar ->
-      return $
-      forAll arbitrary $ \f -> do
-        modifyPVar pvar (apply f) `shouldReturn` a
-        readPVar pvar `shouldReturn` apply f a
     propPVarIO "modifyPVar_" gen $ \a pvar ->
       return $
       forAll arbitrary $ \f -> do
         modifyPVar_ pvar (apply f)
         readPVar pvar `shouldReturn` apply f a
-    propPVarIO "modifyPVarM" gen $ \a pvar ->
+    propPVarIO "modifyPVar" gen $ \a pvar ->
+      return $
+      forAll arbitrary $ \f -> do
+        let (a', b :: Int) = apply f a
+        modifyPVar pvar (apply f) `shouldReturn` b
+        readPVar pvar `shouldReturn` a'
+    propPVarIO "fetchModifyPVar" gen $ \a pvar ->
+      return $
+      forAll arbitrary $ \f -> do
+        fetchModifyPVar pvar (apply f) `shouldReturn` a
+        readPVar pvar `shouldReturn` apply f a
+    propPVarIO "fetchModifyPVarM" gen $ \a pvar ->
       return $
       forAllIO arbitrary $ \f -> do
         a' <-
-          modifyPVarM pvar $ \a' -> do
+          fetchModifyPVarM pvar $ \a' -> do
             a' `shouldBe` a
             pure $ apply f a'
         a' `shouldBe` a
         readPVar pvar `shouldReturn` apply f a
+    propPVarIO "modifyFetchPVar" gen $ \a pvar ->
+      return $
+      forAll arbitrary $ \f ->
+        modifyFetchPVar pvar (apply f) `shouldReturn` apply f a
+    propPVarIO "modifyFetchPVarM" gen $ \a pvar ->
+      return $
+      forAllIO arbitrary $ \f -> do
+        a' <-
+          modifyFetchPVarM pvar $ \a' -> do
+            a' `shouldBe` a
+            pure $ apply f a'
+        a' `shouldBe` apply f a
     propPVarIO "modifyPVarM_" gen $ \a pvar ->
       return $
       forAllIO arbitrary $ \f -> do
@@ -213,7 +231,7 @@ specPrim defZero gen extraSpec =
         isMutableByteArrayPinned mba `shouldBe` False
         ba <- unsafeFreezeByteArray mba
         isByteArrayPinned ba `shouldBe` False
-      it "Large - Pinned" $ do
+      it "Large - Pinned" $
         forAllIO arbitrary $ \(NonNegative n) -> do
           let n' = n + leastThreshold
           mba <- newByteArray n'
@@ -395,7 +413,7 @@ specAtomic = do
           yvar <- newPVar x
           ys' <-
             mapConcurrently
-              (\_ -> atomicModifyIntPVar yvar (\y -> (complement y, y)))
+              (\_ -> atomicFetchModifyIntPVar yvar complement)
               [1..n]
           y' <- atomicReadIntPVar yvar
           x' `shouldBe` y'
@@ -426,12 +444,18 @@ specAtomic = do
           yvar <- newPVar x
           ys' <-
             mapConcurrently
-              (\y' -> atomicModifyIntPVar yvar (\y -> (f y y', y)))
+              (\y' -> atomicFetchModifyIntPVar yvar (`f` y'))
               xs
           y' <- atomicReadIntPVar yvar
+          atomicWriteIntPVar yvar x
+          ys'' <-
+            mapConcurrently
+              (\y'' -> atomicModifyFetchIntPVar yvar (`f` y''))
+              xs
           x' `shouldBe` y'
           F.foldl' f x' xs' `shouldBe` F.foldl' f x xs
           F.foldl' f y' ys' `shouldBe` F.foldl' f x xs
+          F.foldl' f x ys'' `shouldBe` F.foldl' f x xs
 
 spec :: Spec
 spec = do

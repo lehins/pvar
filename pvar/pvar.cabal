@@ -1,7 +1,7 @@
 cabal-version: 1.12
 
 name:           pvar
-version:        0.1.1.0
+version:        0.1.2.0
 synopsis:       Mutable variable with primitive values
 description:    Please see the README on GitHub at <https://github.com/lehins/pvar#readme>
 homepage:       https://github.com/lehins/pvar#readme
