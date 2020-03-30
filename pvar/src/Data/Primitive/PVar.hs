@@ -18,7 +18,7 @@ module Data.Primitive.PVar
     -- `Data.IORef.IORef`, `Data.STRef.STRef` and `Data.Primtive.MutVar.MutVar`. This is
     -- because value is mutated directly in memory instead of following an extra
     -- pointer. Besides better performance there is another consequence of direct
-    -- mutation, namely that values are always evaluated to normal form when being written
+    -- mutation, namely the value is always evaluated to normal form when being written
     -- into a `PVar`
 
   -- * Primitive variable
@@ -28,14 +28,14 @@ module Data.Primitive.PVar
   -- * Generic Operations
   , readPVar
   , writePVar
-  , modifyPVar_
   , modifyPVar
-  , modifyFetchPVar
+  , modifyPVar_
   , fetchModifyPVar
-  , modifyPVarM_
+  , modifyFetchPVar
   , modifyPVarM
-  , modifyFetchPVarM
+  , modifyPVarM_
   , fetchModifyPVarM
+  , modifyFetchPVarM
   , swapPVars_
   , swapPVars
   , copyPVar
@@ -62,8 +62,8 @@ module Data.Primitive.PVar
   -- ** Atomic operations
   , atomicModifyIntPVar
   , atomicModifyIntPVar_
-  , atomicModifyFetchIntPVar
   , atomicFetchModifyIntPVar
+  , atomicModifyFetchIntPVar
   , atomicReadIntPVar
   , atomicWriteIntPVar
   , casIntPVar
