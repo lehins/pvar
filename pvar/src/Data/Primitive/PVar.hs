@@ -85,7 +85,6 @@ import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_,
 import Control.Monad.ST (ST, runST)
 import Data.Primitive.PVar.Internal
 import Data.Primitive.PVar.Unsafe
-import Data.Primitive (sizeOf, alignment)
 import Data.Primitive.Types
 import qualified Foreign.Storable as S
 import GHC.Exts
@@ -332,7 +331,7 @@ atomicAndIntPVar (PVar mba#) a =
 {-# INLINE atomicAndIntPVar #-}
 
 
--- | Binary negation of conjuction (Not AND), corresponds to @\\x y -> `Data.Bits.complement` (x
+-- | Binary negation of conjuction (NAND), corresponds to @\\x y -> `Data.Bits.complement` (x
 -- `Data.Bits..&.` y)@ done atomically. Returns the previous value of the mutable variable. Implies
 -- a full memory barrier.
 --

@@ -44,16 +44,21 @@ module Data.Primitive.PVar.Internal
   -- * Re-exports
   , isByteArrayPinned#
   , isMutableByteArrayPinned#
+  , sizeOf
+  , alignment
   )
   where
 
 import Control.DeepSeq
 import Control.Monad.Primitive (PrimMonad(primitive), PrimState, primitive_,
                                 touch, unsafePrimToPrim)
-import Data.Primitive (sizeOf, alignment)
 import Data.Primitive.Types
 import qualified Foreign.Storable as S
 import GHC.Exts
+
+#if !MIN_VERSION_primitive(0,6,3)
+import Data.Primitive (sizeOf, alignment)
+#endif
 
 -- | Mutable variable with primitive value.
 --
