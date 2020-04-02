@@ -132,7 +132,7 @@ withPtrPVar pvar f =
 -- | Convert `PVar` into a `ForeignPtr`, but only if it is backed by pinned memory.
 --
 -- @since 0.1.0
-toForeignPtrPVar :: PVar IO a -> Maybe (ForeignPtr a)
+toForeignPtrPVar :: PVar m a -> Maybe (ForeignPtr a)
 toForeignPtrPVar pvar
   | isPinnedPVar pvar = Just $ unsafeToForeignPtrPVar pvar
   | otherwise = Nothing

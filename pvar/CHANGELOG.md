@@ -1,5 +1,9 @@
 # Changelog for pvar
 
+## 0.2.x
+
+* Relax monad in conversion to ForeignPtr
+
 ## 0.2.0.0
 
 * Rename `modifyPVar` to `fetchModifyPVar` and `modifyPVarM` to `fetchModifyPVarM`. This

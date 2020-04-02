@@ -61,10 +61,10 @@ import Data.Typeable
 -- | Convert `PVar` into a `ForeignPtr`, very unsafe if not backed by pinned memory.
 --
 -- @since 0.1.0
-unsafeToForeignPtrPVar :: PVar IO a -> ForeignPtr a
+unsafeToForeignPtrPVar :: PVar m a -> ForeignPtr a
 unsafeToForeignPtrPVar pvar@(PVar mba#) =
   case unsafeToPtrPVar pvar of
-    Ptr addr# -> ForeignPtr addr# (PlainPtr mba#)
+    Ptr addr# -> ForeignPtr addr# (PlainPtr (unsafeCoerce# mba#))
 {-# INLINE unsafeToForeignPtrPVar #-}
 
 
