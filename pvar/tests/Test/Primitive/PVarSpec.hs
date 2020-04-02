@@ -223,9 +223,12 @@ specPrim defZero gen extraSpec =
         readPVar var `shouldReturn` defZero
     describe "Pinned Memory" $ do
       let mostThreshold = 3248
-          leastThreshold = 3249
-          -- Documented to be 3277, but seems to be different in practice.
-          -- https://gitlab.haskell.org/ghc/ghc/-/blob/feb852e67e166f752c783978f5fecc3c28c966f9/docs/users_guide/ffi-chap.rst#L1008
+          leastThreshold = 3277
+      -- Experimentally found the threshold to be 3249:
+      --     mostThreshold = 3248
+      --     leastThreshold = 3249
+      -- Documented to be 3277, but seems to be different in practice.
+      -- https://gitlab.haskell.org/ghc/ghc/-/blob/feb852e67e166f752c783978f5fecc3c28c966f9/docs/users_guide/ffi-chap.rst#L1008
       it "Small - Unpinned" $ do
         mba <- newByteArray mostThreshold
         isMutableByteArrayPinned mba `shouldBe` False
