@@ -161,7 +161,7 @@ copyPVarToPtr pvar@(PVar mbas#) (Ptr addr#) =
 -- | Apply a pure function to the contents of a mutable variable. Returns the artifact of
 -- computation.
 --
--- @since 0.1.2
+-- @since 0.2.0
 modifyPVar :: (PrimMonad m, Prim a) => PVar m a -> (a -> (a, b)) -> m b
 modifyPVar pvar f = modifyPVarM pvar (return . f)
 {-# INLINE modifyPVar #-}
@@ -176,14 +176,14 @@ modifyPVar_ pvar f = modifyPVarM_ pvar (return . f)
 
 -- | Apply a pure function to the contents of a mutable variable. Returns the old value.
 --
--- @since 0.1.2
+-- @since 0.2.0
 fetchModifyPVar :: (PrimMonad m, Prim a) => PVar m a -> (a -> a) -> m a
 fetchModifyPVar pvar f = fetchModifyPVarM pvar (return . f)
 {-# INLINE fetchModifyPVar #-}
 
 -- | Apply a pure function to the contents of a mutable variable. Returns the new value.
 --
--- @since 0.1.2
+-- @since 0.2.0
 modifyFetchPVar :: (PrimMonad m, Prim a) => PVar m a -> (a -> a) -> m a
 modifyFetchPVar pvar f = modifyFetchPVarM pvar (return . f)
 {-# INLINE modifyFetchPVar #-}
@@ -192,7 +192,7 @@ modifyFetchPVar pvar f = modifyFetchPVarM pvar (return . f)
 -- | Apply a monadic action to the contents of a mutable variable. Returns the artifact of
 -- computation.
 --
--- @since 0.1.2
+-- @since 0.2.0
 modifyPVarM :: (PrimMonad m, Prim a) => PVar m a -> (a -> m (a, b)) -> m b
 modifyPVarM pvar f = do
   a <- readPVar pvar
@@ -202,7 +202,7 @@ modifyPVarM pvar f = do
 
 -- | Apply a monadic action to the contents of a mutable variable. Returns the old value.
 --
--- @since 0.1.2
+-- @since 0.2.0
 fetchModifyPVarM :: (PrimMonad m, Prim a) => PVar m a -> (a -> m a) -> m a
 fetchModifyPVarM pvar f = do
   a <- readPVar pvar
@@ -212,7 +212,7 @@ fetchModifyPVarM pvar f = do
 
 -- | Apply a monadic action to the contents of a mutable variable. Returns the new value.
 --
--- @since 0.1.2
+-- @since 0.2.0
 modifyFetchPVarM :: (PrimMonad m, Prim a) => PVar m a -> (a -> m a) -> m a
 modifyFetchPVarM pvar f = do
   a <- readPVar pvar
@@ -324,7 +324,7 @@ atomicWriteIntPVar (PVar mba#) a = primitive_ (atomicWriteIntArray# mba# 0# (unI
 -- | Apply a function to an integer element of a `PVar` atomically. Implies a full memory
 -- barrier. Returns the new value.
 --
--- @since 0.1.2
+-- @since 0.2.0
 atomicFetchModifyIntPVar ::
      PrimMonad m => PVar m Int -> (Int -> Int) -> m Int
 atomicFetchModifyIntPVar pvar f =
@@ -336,7 +336,7 @@ atomicFetchModifyIntPVar pvar f =
 -- | Apply a function to an integer element of a `PVar` atomically. Implies a full memory
 -- barrier. Returns the new value.
 --
--- @since 0.1.2
+-- @since 0.2.0
 atomicModifyFetchIntPVar ::
      PrimMonad m => PVar m Int -> (Int -> Int) -> m Int
 atomicModifyFetchIntPVar pvar f =

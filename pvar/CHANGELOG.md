@@ -1,6 +1,6 @@
 # Changelog for pvar
 
-## 0.1.2.0
+## 0.2.0.0
 
 * Rename `modifyPVar` to `fetchModifyPVar` and `modifyPVarM` to `fetchModifyPVarM`. This
   is a breaking change in favor of consistency with other librarries.

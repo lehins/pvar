@@ -1,14 +1,15 @@
 cabal-version: 1.12
 
 name:           pvar
-version:        0.1.2.0
+version:        0.2.0.0
 synopsis:       Mutable variable with primitive values
-description:    Please see the README on GitHub at <https://github.com/lehins/pvar#readme>
+description:    Mutable variable `PVar` that is backed by a single value `MutableByteArray`
 homepage:       https://github.com/lehins/pvar#readme
 bug-reports:    https://github.com/lehins/pvar/issues
 author:         Alexey Kuleshevich
 maintainer:     alexey@kuleshevi.ch
-copyright:      Alexey Kuleshevich
+copyright:      2020 Alexey Kuleshevich
+category:       Data
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
