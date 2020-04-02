@@ -21,11 +21,11 @@ module Data.Primitive.PVar
     -- mutation, namely the value is always evaluated to normal form when being written
     -- into a `PVar`
 
-  -- * Primitive variable
     PVar
+  -- * Creation
   , newPVar
   , withPVarST
-  -- * Generic Operations
+  -- * Mutable Operations
   , readPVar
   , writePVar
   , modifyPVar
@@ -59,7 +59,7 @@ module Data.Primitive.PVar
   -- , (=*)
   -- , (=/)
   -- , (=%)
-  -- ** Atomic operations
+  -- * Atomic operations
   , atomicModifyIntPVar
   , atomicModifyIntPVar_
   , atomicFetchModifyIntPVar
@@ -74,7 +74,7 @@ module Data.Primitive.PVar
   , atomicOrIntPVar
   , atomicXorIntPVar
   , atomicNotIntPVar
-  -- ** Re-exports
+  -- * Re-exports
   , Prim
   , PrimMonad(PrimState)
   , RealWorld
