@@ -67,9 +67,9 @@ data PVar m a = PVar (MutableByteArray# (PrimState m))
 
 -- | @`S.poke`+`S.peek`@ will result in a new copy of a `PVar`
 instance Prim a => S.Storable (PVar IO a) where
-  sizeOf _ = sizeOf (undefined :: a)
+  sizeOf = sizeOfPVar
   {-# INLINE sizeOf #-}
-  alignment _ = alignment (undefined :: a)
+  alignment = alignmentPVar
   {-# INLINE alignment #-}
   peekElemOff (Ptr addr#) (I# i#) = do
     a <- primitive (readOffAddr# addr# i#)

@@ -52,7 +52,8 @@ module Data.Primitive.PVar
   , copyPVarToPtr
   , toForeignPtrPVar
   , isPinnedPVar
-  , peekPrim, pokePrim
+  , peekPrim
+  , pokePrim
   -- -- * Numeric infix operations
   -- , (=+)
   -- , (=-)
