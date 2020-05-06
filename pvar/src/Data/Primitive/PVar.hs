@@ -303,8 +303,7 @@ withAlignedStorablePVar a f = do
 {-# INLINE withAlignedStorablePVar #-}
 
 
--- | Create a new `PVar` in pinned memory with an initial value in it aligned on the size of
--- an `Int`. Implies a full memory barrier.
+-- | Read a value from `PVar` atomically. Implies a full memory barrier.
 --
 -- @since 0.1.0
 atomicReadIntPVar :: PrimMonad m => PVar m Int -> m Int
