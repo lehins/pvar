@@ -1,7 +1,11 @@
 # Changelog for pvar
 
-## 0.2.x
+## 1.0.0.0
 
+* Switch to `MonadPrim` type classes that was introduced in `primitive-0.7.1.0`
+* Fix definition `PVar m a` -> `PVar a s`. Parametrization on a monad is not general
+  enough for some cases and making state token `s` last allows to use it with `forall`
+  easier.
 * Relax monad in conversion to ForeignPtr
 
 ## 0.2.0.0

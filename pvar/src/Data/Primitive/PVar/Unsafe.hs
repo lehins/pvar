@@ -49,7 +49,7 @@ module Data.Primitive.PVar.Unsafe
   )
   where
 
-import Control.Monad.Primitive (PrimMonad, PrimState, primitive_)
+import Control.Monad.Primitive (MonadPrim, primitive_)
 import Data.Primitive.PVar.Internal
 import Data.Primitive.ByteArray (ByteArray(..), MutableByteArray(..))
 import Data.Primitive.Types
@@ -61,7 +61,7 @@ import Data.Typeable
 -- | Convert `PVar` into a `ForeignPtr`, very unsafe if not backed by pinned memory.
 --
 -- @since 0.1.0
-unsafeToForeignPtrPVar :: PVar m a -> ForeignPtr a
+unsafeToForeignPtrPVar :: PVar a s -> ForeignPtr a
 unsafeToForeignPtrPVar pvar@(PVar mba#) =
   case unsafeToPtrPVar pvar of
     Ptr addr# -> ForeignPtr addr# (PlainPtr (unsafeCoerce# mba#))
@@ -75,7 +75,7 @@ unsafeToForeignPtrPVar pvar@(PVar mba#) =
 -- `Data.Primitive.PVar.toForeignPtr` instead.
 --
 -- @since 0.1.0
-toPtrPVar :: PVar m a -> Maybe (Ptr a)
+toPtrPVar :: PVar a s -> Maybe (Ptr a)
 toPtrPVar pvar
   | isPinnedPVar pvar = Just $ unsafeToPtrPVar pvar
   | otherwise = Nothing
@@ -85,8 +85,8 @@ toPtrPVar pvar
 --
 -- @since 0.1.0
 setPVar# ::
-     (PrimMonad m, Prim a)
-  => PVar m a
+     (MonadPrim s m, Prim a)
+  => PVar a s
   -> Int# -- ^ Byte value to fill the `PVar` with
   -> m ()
 setPVar# pvar@(PVar mba#) a# =
@@ -96,7 +96,7 @@ setPVar# pvar@(PVar mba#) a# =
 -- | Reset contents of a mutable variable to zero.
 --
 -- @since 0.1.0
-zeroPVar :: (PrimMonad m, Prim a) => PVar m a -> m ()
+zeroPVar :: (MonadPrim s m, Prim a) => PVar a s -> m ()
 zeroPVar pvar = setPVar# pvar 0#
 {-# INLINE zeroPVar #-}
 
@@ -105,9 +105,9 @@ zeroPVar pvar = setPVar# pvar 0#
 --
 -- @since 0.1.0
 copyPVarToMutableByteArray ::
-     (PrimMonad m, Prim a)
-  => PVar m a
-  -> MutableByteArray (PrimState m)
+     (MonadPrim s m, Prim a)
+  => PVar a s
+  -> MutableByteArray s
   -> Int -- ^ Offset in number of elements into the array
   -> m ()
 copyPVarToMutableByteArray pvar mba offset =
@@ -121,10 +121,10 @@ copyPVarToMutableByteArray pvar mba offset =
 --
 -- @since 0.1.0
 copyFromByteArrayPVar ::
-     (PrimMonad m, Prim a)
+     (MonadPrim s m, Prim a)
   => ByteArray -- ^ Source array
   -> Int -- ^ Offset in number of elements into the array
-  -> PVar m a
+  -> PVar a s
   -> m ()
 copyFromByteArrayPVar ba offset pvar =
   copyBytesFromByteArrayPVar ba (offset * sizeOfPVar pvar) pvar
@@ -136,10 +136,10 @@ copyFromByteArrayPVar ba offset pvar =
 --
 -- @since 0.1.0
 copyFromMutableByteArrayPVar ::
-     (PrimMonad m, Prim a)
-  => MutableByteArray (PrimState m)
+     (MonadPrim s m, Prim a)
+  => MutableByteArray s
   -> Int -- ^ Offset in number of elements into the array
-  -> PVar m a
+  -> PVar a s
   -> m ()
 copyFromMutableByteArrayPVar mba offset pvar =
   copyBytesFromMutableByteArrayPVar mba (offset * sizeOfPVar pvar) pvar
@@ -152,9 +152,9 @@ copyFromMutableByteArrayPVar mba offset pvar =
 --
 -- @since 0.1.0
 copyBytesPVarToMutableByteArray ::
-     (PrimMonad m, Prim a)
-  => PVar m a
-  -> MutableByteArray (PrimState m)
+     (MonadPrim s m, Prim a)
+  => PVar a s
+  -> MutableByteArray s
   -> Int -- ^ Offset in bytes into the array
   -> m ()
 copyBytesPVarToMutableByteArray pvar@(PVar mbas#) (MutableByteArray mbad#) (I# offset#) =
@@ -168,10 +168,10 @@ copyBytesPVarToMutableByteArray pvar@(PVar mbas#) (MutableByteArray mbad#) (I# o
 --
 -- @since 0.1.0
 copyBytesFromByteArrayPVar ::
-     (PrimMonad m, Prim a)
+     (MonadPrim s m, Prim a)
   => ByteArray -- ^ Source array
   -> Int -- ^ Offset in bytes into the array
-  -> PVar m a
+  -> PVar a s
   -> m ()
 copyBytesFromByteArrayPVar (ByteArray ba#) (I# offset#) pvar@(PVar mba#) =
   primitive_ (copyByteArray# ba# offset# mba# 0# (sizeOfPVar# pvar))
@@ -183,10 +183,10 @@ copyBytesFromByteArrayPVar (ByteArray ba#) (I# offset#) pvar@(PVar mba#) =
 --
 -- @since 0.1.0
 copyBytesFromMutableByteArrayPVar ::
-     (PrimMonad m, Prim a)
-  => MutableByteArray (PrimState m)
+     (MonadPrim s m, Prim a)
+  => MutableByteArray s
   -> Int -- ^ Offset in bytes into the array
-  -> PVar m a
+  -> PVar a s
   -> m ()
 copyBytesFromMutableByteArrayPVar (MutableByteArray mbas#) (I# offset#) pvar@(PVar mbad#) =
   primitive_ (copyMutableByteArray# mbas# offset# mbad# 0# (sizeOfPVar# pvar))
