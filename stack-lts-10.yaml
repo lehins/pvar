@@ -10,3 +10,6 @@ extra-deps:
 - validity-0.9.0.3@sha256:ee12ebe4c09ecd52c1e36604da5ab00c17d4fc815a4d18e73f7fb2f9ba449f46,2612
 - genvalidity-0.9.1.0@sha256:46cc1deca49f5a9b16034b5a56732c821835e34865108a61fb821e6e7c04d4dd,2892
 - primitive-0.7.1.0@sha256:6a237bb338bcc43193077ff8e8c0f0ce2de14c652231496a15672e8b563a07e2,2604
+- github: lehins/primal
+  commit: fe7461c5bd8634394f5508d89f1e8fe9a10716c0
+  subdirs: primal
