@@ -6,14 +6,15 @@ module Test.Prim.Memory.PVarSpec (spec) where
 import Control.Concurrent.Async
 import Control.DeepSeq
 import Control.Monad
-import Control.Prim.Monad
 import Control.Monad.ST
+import Control.Prim.Monad
 import Data.Bits
 import Data.Foldable as F
 import Data.GenValidity
 import Data.Int
-import Data.Prim
 import Data.List (partition)
+import Data.Maybe
+import Data.Prim
 import Data.Prim.Memory.PVar
 import Data.Prim.Memory.PVar.Unsafe as Unsafe
 import Foreign.ForeignPtr
@@ -223,7 +224,20 @@ specStorable gen =
             b' `shouldBe` b
 
 
-specAtomic :: (Show e, Eq e, Prim e, Num e, AtomicCount e, AtomicBits e) => Gen e -> Spec
+specAtomic ::
+     forall e.
+     ( Show e
+     , Eq e
+     , Prim e
+     , Num e
+     , AtomicCount e
+     , AtomicBits e
+     , CoArbitrary e
+     , Arbitrary e
+     , Function e
+     )
+  => Gen e
+  -> Spec
 specAtomic gen = do
   let basicAtomicFetchOldProp name atomicFun fun =
         propPVarIO name gen $ \x var ->
@@ -241,34 +255,29 @@ specAtomic gen = do
     describe "Basic" $ do
       basicAtomicFetchOldProp "atomicAddFetchOldPVar" atomicAddFetchOldPVar (+)
       basicAtomicFetchNewProp "atomicAddFetchNewPVar" atomicAddFetchNewPVar (+)
-      basicAtomicFetchNewProp "atomicSubFetchOldPVar" atomicSubFetchOldPVar (-)
+      basicAtomicFetchOldProp "atomicSubFetchOldPVar" atomicSubFetchOldPVar (-)
       basicAtomicFetchNewProp "atomicSubFetchNewPVar" atomicSubFetchNewPVar (-)
-      propPVarIO "atomicAndFetchOldPVar" gen $ \x var ->
-        return $
-        forAllIO gen $ \y -> do
-          atomicAndFetchOldPVar var y `shouldReturn` x
-          atomicReadPVar var `shouldReturn` (x .&. y)
-      propPVarIO "atomicNandFetchOldPVar" gen $ \x var ->
-        return $
-        forAllIO gen $ \y -> do
-          x' <- atomicNandFetchOldPVar var y
-          x' `shouldBe` x
-          atomicReadPVar var `shouldReturn` complement (x .&. y)
-      propPVarIO "atomicOrFetchOldPVar" gen $ \x var ->
-        return $
-        forAllIO gen $ \y -> do
-          x' <- atomicOrFetchOldPVar var y
-          x' `shouldBe` x
-          atomicReadPVar var `shouldReturn` (x .|. y)
-      propPVarIO "atomicXorFetchOldPVar" gen $ \x var ->
-        return $
-        forAllIO gen $ \y -> do
-          x' <- atomicXorFetchOldPVar var y
-          x' `shouldBe` x
-          atomicReadPVar var `shouldReturn` (x `xor` y)
+      basicAtomicFetchOldProp "atomicAndFetchOldPVar" atomicAndFetchOldPVar $ \x y ->
+        x .&. y
+      basicAtomicFetchNewProp "atomicAndFetchNewPVar" atomicAndFetchNewPVar $ \x y ->
+        x .&. y
+      basicAtomicFetchOldProp "atomicNandFetchOldPVar" atomicNandFetchOldPVar $ \x y ->
+        complement (x .&. y)
+      basicAtomicFetchNewProp "atomicNandFetchNewPVar" atomicNandFetchNewPVar $ \x y ->
+        complement (x .&. y)
+      basicAtomicFetchOldProp "atomicOrFetchOldPVar" atomicOrFetchOldPVar $ \x y ->
+        x .|. y
+      basicAtomicFetchNewProp "atomicOrFetchNewPVar" atomicOrFetchNewPVar $ \x y ->
+        x .|. y
+      basicAtomicFetchOldProp "atomicXorFetchOldPVar" atomicXorFetchOldPVar $ \x y ->
+        x `xor` y
+      basicAtomicFetchNewProp "atomicXorFetchNewPVar" atomicXorFetchNewPVar $ \x y ->
+        x `xor` y
       propPVarIO "atomicNotFetchOldPVar" gen $ \x var -> do
-        x' <- atomicNotFetchOldPVar var
-        x' `shouldBe` x
+        atomicNotFetchOldPVar var `shouldReturn` x
+        atomicReadPVar var `shouldReturn` complement x
+      propPVarIO "atomicNotFetchNewPVar" gen $ \x var -> do
+        atomicNotFetchNewPVar var `shouldReturn` complement x
         atomicReadPVar var `shouldReturn` complement x
     describe "Concurrent" $ do
       propPVarIO "atomicAndFetchOldPVar" gen $ \x var ->
@@ -287,18 +296,15 @@ specAtomic gen = do
       propPVarIO "casPVar" gen $ \x var ->
         return $
         forAllIO ((,) <$> gen <*> gen) $ \(y, z) -> do
-          x' <- casPVar var x y
-          x' `shouldBe` x
-          y' <- atomicReadPVar var
+          casPVar var x y `shouldReturn` x
+          atomicReadPVar var `shouldReturn` y
           atomicWritePVar var z
-          y' `shouldBe` y
-          z' <- atomicReadPVar var
-          z' `shouldBe` z
-      casProp_ "atomicAndFetchOldPVar" (+) atomicAndFetchOldPVar
+          atomicReadPVar var `shouldReturn` z
+      casProp_ "atomicAddFetchOldPVar" (+) atomicAddFetchOldPVar
       casProp_ "atomicSubFetchOldPVar" subtract atomicSubFetchOldPVar
-      casProp "atomicAndFetchOldPVar" (.&.) atomicAndFetchOldPVar
-      casProp "atomicOrFetchOldPVar" (.|.) atomicOrFetchOldPVar
-      casProp_  "atomicXorFetchOldPVar" xor atomicXorFetchOldPVar
+      casSymAssocProp "atomicAndFetchOldPVar" (.&.) atomicAndFetchOldPVar
+      casSymAssocProp "atomicOrFetchOldPVar" (.|.) atomicOrFetchOldPVar
+      casProp_ "atomicXorFetchOldPVar" xor atomicXorFetchOldPVar
       propPVarIO "atomicNotPVar" gen $ \x xvar ->
         return $
         forAllIO arbitrary $ \(Positive n) -> do
@@ -319,6 +325,23 @@ specAtomic gen = do
               sys = partition (== x) (y' : ys')
           sxs `shouldBe` sys
           length l `shouldSatisfy` (\len -> len == lenr || len == lenr + 1)
+      prop "atomicModifyPVar" $
+        forAll gen $ \z ->
+          forAllIO (arbitrary :: Gen (Fun (e, Int) e, [Int])) $ \(f, xs) -> do
+            zvar <- newPVar $ Atom (Nothing, z)
+            let --g = applyFun2 f
+                g y x = y `xor` fromIntegral x
+            mxs <-
+              mapConcurrently
+                (\x ->
+                   atomicModifyPVar
+                     zvar
+                     (\(Atom (mPrev, a)) -> (Atom (Just x, g a x), mPrev)))
+                xs
+            Atom (mLast, z') <- atomicReadPVar zvar
+            let xs' = catMaybes (mxs ++ [mLast])
+            xs' `shouldMatchList` xs
+            z' `shouldBe` F.foldl' g z xs'
   where
     casProp_ name f af =
       propPVarIO name gen $ \x xvar ->
@@ -328,9 +351,8 @@ specAtomic gen = do
           x' <- atomicReadPVar xvar
           yvar <- newPVar x
           void $ mapConcurrently (atomicModifyPVar_ yvar . f) xs
-          y' <- atomicReadPVar yvar
-          x' `shouldBe` y'
-    casProp name f af =
+          atomicReadPVar yvar `shouldReturn` x'
+    casSymAssocProp name f af =
       propPVarIO name gen $ \x xvar ->
         return $
         forAllIO (genListOf gen) $ \xs -> do
@@ -338,15 +360,16 @@ specAtomic gen = do
           x' <- atomicReadPVar xvar
           yvar <- newPVar x
           ys' <-
-            mapConcurrently (\y' -> atomicModifyFetchOldPVar yvar (`f` y')) xs
-          y' <- atomicReadPVar yvar
+            mapConcurrently (\a -> atomicModifyFetchOldPVar yvar (`f` a)) xs
+          atomicReadPVar yvar `shouldReturn` x'
           atomicWritePVar yvar x
           ys'' <-
-            mapConcurrently (\y'' -> atomicModifyFetchOldPVar yvar (`f` y'')) xs
-          x' `shouldBe` y'
-          F.foldl' f x' xs' `shouldBe` F.foldl' f x xs
-          F.foldl' f y' ys' `shouldBe` F.foldl' f x xs
-          F.foldl' f x ys'' `shouldBe` F.foldl' f x xs
+            mapConcurrently (\a -> atomicModifyFetchNewPVar yvar (`f` a)) xs
+          atomicReadPVar yvar `shouldReturn` x'
+          let res = F.foldl' f x xs
+          F.foldl' f x' xs' `shouldBe` res
+          F.foldl' f x' ys' `shouldBe` res
+          F.foldl' f x ys'' `shouldBe` res
 
 spec :: Spec
 spec = do

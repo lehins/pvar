@@ -24,8 +24,6 @@ module Data.Prim.Memory.PVar.Unsafe
   , sizeOfPVar#
   , alignmentPVar#
   , setPVar#
-  -- * Helpers
-  , unI#
   )
   where
 

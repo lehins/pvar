@@ -22,7 +22,6 @@ module Data.Prim.Memory.PVar.Internal
   , newRawPVar
   , newRawPinnedPVar
   , newRawAlignedPinnedPVar
-  , rawAlignedStorablePVar
   , unsafeToPtrPVar
   , unsafeWithPtrPVar
   , readPVar
@@ -32,7 +31,6 @@ module Data.Prim.Memory.PVar.Internal
   , sizeOfPVar#
   , alignmentPVar
   , alignmentPVar#
-  , unI#
   )
   where
 
@@ -41,7 +39,6 @@ import Control.Prim.Monad
 import Data.Prim
 import Data.Prim.Class
 import Foreign.Prim
-import qualified Foreign.Storable as S
 
 -- | Mutable variable with primitive value.
 --
@@ -127,24 +124,6 @@ newRawAlignedPinnedPVar =
       (# s'#, mba# #) -> (# s'#, PVar mba# #)
 {-# INLINE newRawAlignedPinnedPVar #-}
 
--- | Create a mutable variable in pinned uninitialized memory using Storable interface for
--- getting the number of bytes for memory allocation and alignement.
---
--- @since 0.1.0
-rawAlignedStorablePVar ::
-     forall a m s. (MonadPrim s m, S.Storable a)
-  => m (PVar a s)
-rawAlignedStorablePVar =
-  let dummy = undefined :: a
-   in case S.sizeOf dummy of
-        I# size# ->
-          case S.alignment dummy of
-            I# align# ->
-              prim $ \s# ->
-                case newAlignedPinnedByteArray# size# align# s# of
-                  (# s'#, mba# #) -> (# s'#, PVar mba# #)
-{-# INLINE rawAlignedStorablePVar #-}
-
 
 -- | Get the address to the contents. This is highly unsafe, espcially if memory is not pinned
 --
@@ -212,14 +191,6 @@ sizeOfPVar pvar = I# (sizeOfPVar# pvar)
 alignmentPVar :: Prim a => PVar a s -> Int
 alignmentPVar pvar = I# (alignmentPVar# pvar)
 {-# INLINE alignmentPVar #-}
-
--- | Unwrap the primitive `Int`
---
--- @since 0.1.0
-unI# :: Int -> Int#
-unI# (I# i#) = i#
-{-# INLINE unI# #-}
-
 
 
 -- | Check if `PVar` is backed by pinned memory or not
