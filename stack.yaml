@@ -1,5 +1,5 @@
-resolver: lts-14.27
+resolver: lts-16.17
 packages:
 - pvar
 extra-deps:
-- primitive-0.7.1.0@sha256:6a237bb338bcc43193077ff8e8c0f0ce2de14c652231496a15672e8b563a07e2,2604
+- ../primal/primal
