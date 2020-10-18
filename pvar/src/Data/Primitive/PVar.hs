@@ -22,6 +22,7 @@ module Data.Primitive.PVar
     -- into a `PVar`
 
     PVar
+  , RW
   -- * Creation
   , newPVar
   , withPVarST
@@ -104,7 +105,8 @@ import GHC.ForeignPtr
 -- type. This is highly uncommon in practice and if you are intermixing the two concepts
 -- together you probably already know what you are doing.
 
-
+-- | Synonym for `RealWorld`
+type RW = RealWorld
 
 -- | Run an `ST` action on a mutable variable.
 --
