@@ -27,41 +27,41 @@ matrix:
   # The Stack builds. We can pass in arbitrary Stack arguments via the ARGS
   # variable, such as using --stack-yaml to point to a different file.
 
-  - env: GHC="7.10.2" RESOLVER="lts-3.22" STACK_YAML="stack-lts-3.yaml"
-    compiler: ": #stack GHC-7.10.2 (lts-3.22)"
-    addons:
-      apt:
-        packages: [libgmp-dev]
+  # - env: GHC="7.10.2" RESOLVER="lts-3.22" STACK_YAML="stack-lts-3.yaml"
+  #   compiler: ": #stack GHC-7.10.2 (lts-3.22)"
+  #   addons:
+  #     apt:
+  #       packages: [libgmp-dev]
 
-  - env: GHC="7.10.3" RESOLVER="lts-6.35" STACK_YAML="stack-lts-3.yaml"
-    compiler: ": #stack GHC-7.10.3 (lts-6.35)"
-    addons:
-      apt:
-        packages: [libgmp-dev]
+  # - env: GHC="7.10.3" RESOLVER="lts-6.35" STACK_YAML="stack-lts-3.yaml"
+  #   compiler: ": #stack GHC-7.10.3 (lts-6.35)"
+  #   addons:
+  #     apt:
+  #       packages: [libgmp-dev]
 
-  - env: GHC="8.0.1" RESOLVER="lts-7.24" STACK_YAML="stack-lts-7.yaml"
-    compiler: ": #stack GHC-8.0.1 (lts-7.27)"
-    addons:
-      apt:
-        packages: [libgmp-dev]
+  # - env: GHC="8.0.1" RESOLVER="lts-7.24" STACK_YAML="stack-lts-7.yaml"
+  #   compiler: ": #stack GHC-8.0.1 (lts-7.27)"
+  #   addons:
+  #     apt:
+  #       packages: [libgmp-dev]
 
-  - env: GHC="8.0.2" RESOLVER="lts-8.24" STACK_YAML="stack-lts-7.yaml"
-    compiler: ": #stack GHC-8.0.2 (lts-8.27)"
-    addons:
-      apt:
-        packages: [libgmp-dev]
+  # - env: GHC="8.0.2" RESOLVER="lts-8.24" STACK_YAML="stack-lts-7.yaml"
+  #   compiler: ": #stack GHC-8.0.2 (lts-8.27)"
+  #   addons:
+  #     apt:
+  #       packages: [libgmp-dev]
 
-  - env: GHC="8.2.2" RESOLVER="lts-10.10" STACK_YAML="stack-lts-10.yaml"
-    compiler: ": #stack GHC-8.2.2 (lts-10.10)"
-    addons:
-      apt:
-        packages: [libgmp-dev]
+  # - env: GHC="8.2.2" RESOLVER="lts-10.10" STACK_YAML="stack-lts-10.yaml"
+  #   compiler: ": #stack GHC-8.2.2 (lts-10.10)"
+  #   addons:
+  #     apt:
+  #       packages: [libgmp-dev]
 
-  - env: GHC="8.2.2" RESOLVER="lts-11.22" STACK_YAML="stack-lts-10.yaml"
-    compiler: ": #stack GHC-8.2.2 (lts-11.22)"
-    addons:
-      apt:
-        packages: [libgmp-dev]
+  # - env: GHC="8.2.2" RESOLVER="lts-11.22" STACK_YAML="stack-lts-10.yaml"
+  #   compiler: ": #stack GHC-8.2.2 (lts-11.22)"
+  #   addons:
+  #     apt:
+  #       packages: [libgmp-dev]
 
   - env: GHC="8.4.3" RESOLVER="lts-12.14" STACK_YAML="stack-lts-12.yaml"
     compiler: ": #stack GHC-8.4.3 (lts-12.14)"
