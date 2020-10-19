@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-module Test.Prim.Memory.PVarSpec (spec) where
+module Test.Prim.PVarSpec (spec) where
 
 import Control.Concurrent.Async
 import Control.DeepSeq
@@ -15,8 +15,8 @@ import Data.Int
 import Data.List (partition)
 import Data.Maybe
 import Data.Prim
-import Data.Prim.Memory.PVar
-import Data.Prim.Memory.PVar.Unsafe as Unsafe
+import Data.Prim.PVar
+import Data.Prim.PVar.Unsafe as Unsafe
 import Foreign.ForeignPtr
 import Foreign.Marshal.Alloc
 import Foreign.Prim.Ptr

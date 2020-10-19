@@ -1,14 +1,14 @@
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 -- |
--- Module      : Data.Prim.Memory.PVar.Unsafe
+-- Module      : Data.Prim.PVar.Unsafe
 -- Copyright   : (c) Alexey Kuleshevich 2020
 -- License     : BSD3
 -- Maintainer  : Alexey Kuleshevich <lehins@yandex.ru>
 -- Stability   : experimental
 -- Portability : non-portable
 --
-module Data.Prim.Memory.PVar.Unsafe
+module Data.Prim.PVar.Unsafe
   ( PVar(..)
   -- * Creation
   , newRawPVar
@@ -28,7 +28,7 @@ module Data.Prim.Memory.PVar.Unsafe
   where
 
 import Control.Prim.Monad
-import Data.Prim.Memory.PVar.Internal
+import Data.Prim.PVar.Internal
 import Data.Prim
 import Foreign.Prim
 import GHC.ForeignPtr

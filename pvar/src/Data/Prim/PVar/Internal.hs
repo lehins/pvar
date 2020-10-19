@@ -7,14 +7,14 @@
 {-# LANGUAGE UnboxedTuples #-}
 {-# LANGUAGE UnliftedFFITypes #-}
 -- |
--- Module      : Data.Prim.Memory.PVar.Internal
+-- Module      : Data.Prim.PVar.Internal
 -- Copyright   : (c) Alexey Kuleshevich 2020
 -- License     : BSD3
 -- Maintainer  : Alexey Kuleshevich <lehins@yandex.ru>
 -- Stability   : experimental
 -- Portability : non-portable
 --
-module Data.Prim.Memory.PVar.Internal
+module Data.Prim.PVar.Internal
   ( PVar(..)
   , newPVar
   , newPinnedPVar

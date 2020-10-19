@@ -6,14 +6,14 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 #endif
 -- |
--- Module      : Data.Prim.Memory.PVar
+-- Module      : Data.Prim.PVar
 -- Copyright   : (c) Alexey Kuleshevich 2020
 -- License     : BSD3
 -- Maintainer  : Alexey Kuleshevich <lehins@yandex.ru>
 -- Stability   : experimental
 -- Portability : non-portable
 --
-module Data.Prim.Memory.PVar
+module Data.Prim.PVar
   ( -- | `PVar` has significantly better performance characteristics over
     -- `Data.IORef.IORef`, `Data.STRef.STRef` and `Data.Primitive.MutVar.MutVar`. This is
     -- because value is mutated directly in memory instead of following an extra
@@ -85,8 +85,8 @@ import Control.Monad.ST (ST, runST)
 import Control.Prim.Monad
 import Data.Prim
 import Data.Prim.Atomic
-import Data.Prim.Memory.PVar.Internal
-import Data.Prim.Memory.PVar.Unsafe
+import Data.Prim.PVar.Internal
+import Data.Prim.PVar.Unsafe
 import Foreign.Prim
 
 

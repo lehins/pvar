@@ -1,5 +1,16 @@
 # Changelog for pvar
 
+## 0.2.0.0
+
+* Switch from `primitive` to `primal`
+* Remove all `Storable` related functionality, since `Prim` class supercedes it.
+* Remove compatibility with primops and remove `ByteArray` related functionality.
+* Copy and move functions will be found in `primal-memory` package
+* Atomic operations are now polymorphic that work on `Atomic` instances, instead of being
+  restricted to `Int` only.
+* Modify functions have been renamed for consistency and to better portray the intent
+  (i.e. returning old vs new value)
+
 ## 1.0.0.0
 
 * Switch to `MonadPrim` type classes that was introduced in `primitive-0.7.1.0`

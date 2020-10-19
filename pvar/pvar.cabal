@@ -33,9 +33,9 @@ source-repository head
   location: https://github.com/lehins/pvar
 
 library
-  exposed-modules: Data.Prim.Memory.PVar
-                 , Data.Prim.Memory.PVar.Unsafe
-  other-modules: Data.Prim.Memory.PVar.Internal
+  exposed-modules: Data.Prim.PVar
+                 , Data.Prim.PVar.Unsafe
+  other-modules: Data.Prim.PVar.Internal
   hs-source-dirs: src
   build-depends: base >=4.8 && <6
                , deepseq
@@ -48,7 +48,7 @@ test-suite tests
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules: Spec
-               , Test.Prim.Memory.PVarSpec
+               , Test.Prim.PVarSpec
   hs-source-dirs: tests
   ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
   build-depends: base >=4.7 && <5
