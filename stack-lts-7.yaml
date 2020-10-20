@@ -14,6 +14,6 @@ extra-deps:
 - quickcheck-io-0.2.0@sha256:7bf0b68fb90873825eb2e5e958c1b76126dcf984debb998e81673e6d837e0b2d,1133
 - primitive-0.7.1.0@sha256:6a237bb338bcc43193077ff8e8c0f0ce2de14c652231496a15672e8b563a07e2,2604
 - github: lehins/primal
-  commit: fe7461c5bd8634394f5508d89f1e8fe9a10716c0
+  commit: df5076d1303e1b1ac05c7cb675fe65987e7171db
   subdirs:
     - primal
