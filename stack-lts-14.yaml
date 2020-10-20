@@ -1,0 +1,9 @@
+resolver: lts-14.27
+packages:
+- pvar
+extra-deps:
+#- ../primal/primal
+- github: lehins/primal
+  commit: df5076d1303e1b1ac05c7cb675fe65987e7171db
+  subdirs:
+    - primal
