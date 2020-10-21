@@ -327,9 +327,9 @@ specAtomic gen = do
           length l `shouldSatisfy` (\len -> len == lenr || len == lenr + 1)
       prop "atomicModifyPVar" $
         forAll gen $ \z ->
-          forAllIO (arbitrary :: Gen (Fun (e, Int) e, [Int])) $ \(f, xs) -> do
+          forAllIO (arbitrary :: Gen (Fun (e, Int) e, [Int])) $ \(_f, xs) -> do
             zvar <- newPVar $ Atom (Nothing, z)
-            let --g = applyFun2 f
+            let --g = applyFun2 f -- TODO: figure out what's the issue with using function here
                 g y x = y `xor` fromIntegral x
             mxs <-
               mapConcurrently
