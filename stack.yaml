@@ -4,6 +4,6 @@ packages:
 extra-deps:
 #- ../primal/primal
 - github: lehins/primal
-  commit: 390e1be1d53d98db3892e6851c9cf254f195e81e
+  commit: 33b428e37cc820498b75149d2718d561c7f6b9d4
   subdirs:
     - primal

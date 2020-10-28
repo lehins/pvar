@@ -81,7 +81,6 @@ module Data.Prim.PVar
   , module Data.Prim
   ) where
 
-import Control.Monad.ST (ST, runST)
 import Control.Prim.Monad
 import Data.Prim
 import Data.Prim.Atomic

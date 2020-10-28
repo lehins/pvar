@@ -232,9 +232,6 @@ specAtomic ::
      , Num e
      , AtomicCount e
      , AtomicBits e
-     , CoArbitrary e
-     , Arbitrary e
-     , Function e
      )
   => Gen e
   -> Spec
@@ -327,10 +324,11 @@ specAtomic gen = do
           length l `shouldSatisfy` (\len -> len == lenr || len == lenr + 1)
       prop "atomicModifyPVar" $
         forAll gen $ \z ->
-          forAllIO (arbitrary :: Gen (Fun (e, Int) e, [Int])) $ \(_f, xs) -> do
+          forAllIO (listOf gen) $ \xs -> do
             zvar <- newPVar $ Atom (Nothing, z)
-            let --g = applyFun2 f -- TODO: figure out what's the issue with using function here
-                g y x = y `xor` fromIntegral x
+            -- non-associative function that will produce different results depending on
+            -- the order of application to the list of xs
+            let g = (-)
             mxs <-
               mapConcurrently
                 (\x ->
