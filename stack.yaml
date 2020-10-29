@@ -2,8 +2,8 @@ resolver: lts-16.17
 packages:
 - pvar
 extra-deps:
-#- ../primal/primal
-- github: lehins/primal
-  commit: 33b428e37cc820498b75149d2718d561c7f6b9d4
-  subdirs:
-    - primal
+- ../primal/primal
+# - github: lehins/primal
+#   commit: 33b428e37cc820498b75149d2718d561c7f6b9d4
+#   subdirs:
+#     - primal

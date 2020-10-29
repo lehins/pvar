@@ -62,18 +62,25 @@ module Data.Prim.PVar
   , atomicModifyFetchNewPVar
   , atomicReadPVar
   , atomicWritePVar
+  , atomicAddPVar_
   , atomicAddFetchOldPVar
   , atomicAddFetchNewPVar
+  , atomicSubPVar_
   , atomicSubFetchOldPVar
   , atomicSubFetchNewPVar
+  , atomicAndPVar_
   , atomicAndFetchOldPVar
   , atomicAndFetchNewPVar
+  , atomicNandPVar_
   , atomicNandFetchOldPVar
   , atomicNandFetchNewPVar
+  , atomicOrPVar_
   , atomicOrFetchOldPVar
   , atomicOrFetchNewPVar
+  , atomicXorPVar_
   , atomicXorFetchOldPVar
   , atomicXorFetchNewPVar
+  , atomicNotPVar_
   , atomicNotFetchOldPVar
   , atomicNotFetchNewPVar
   , casPVar
@@ -340,6 +347,12 @@ casPVar (PVar mba#) old new =
 {-# INLINE casPVar #-}
 
 
+-- | Add two numbers, corresponds to @(`+`)@ done atomically. Implies a full memory barrier.
+--
+-- @since 2.0.0
+atomicAddPVar_ :: (AtomicCount e, MonadPrim s m) => PVar e s -> e -> m ()
+atomicAddPVar_ pvar a = void $ atomicAddFetchOldPVar pvar a
+{-# INLINE atomicAddPVar_ #-}
 
 -- | Add two numbers, corresponds to @(`+`)@ done atomically. Returns the previous value of
 -- the mutable variable. Implies a full memory barrier.
@@ -358,6 +371,15 @@ atomicAddFetchNewPVar :: (AtomicCount e, MonadPrim s m) => PVar e s -> e -> m e
 atomicAddFetchNewPVar (PVar mba#) a =
   prim $ atomicAddFetchNewMutableByteArray# mba# 0# a
 {-# INLINE atomicAddFetchNewPVar #-}
+
+
+
+-- | Subtract two numbers, corresponds to @(`-`)@ done atomically. Implies a full memory barrier.
+--
+-- @since 2.0.0
+atomicSubPVar_ :: (AtomicCount e, MonadPrim s m) => PVar e s -> e -> m ()
+atomicSubPVar_ pvar a = void $ atomicSubFetchOldPVar pvar a
+{-# INLINE atomicSubPVar_ #-}
 
 -- | Subtract two numbers, corresponds to @(`-`)@ done atomically. Returns the
 -- previous value of the mutable variable. Implies a full memory barrier.
@@ -378,6 +400,15 @@ atomicSubFetchNewPVar (PVar mba#) a =
 {-# INLINE atomicSubFetchNewPVar #-}
 
 
+
+-- | Binary conjuction (AND), corresponds to @(`Data.Bits..&.`)@ done atomically. Implies
+-- a full memory barrier.
+--
+-- @since 2.0.0
+atomicAndPVar_ :: (AtomicBits e, MonadPrim s m) => PVar e s -> e -> m ()
+atomicAndPVar_ pvar a = void $ atomicAndFetchOldPVar pvar a
+{-# INLINE atomicAndPVar_ #-}
+
 -- | Binary conjuction (AND), corresponds to @(`Data.Bits..&.`)@ done atomically. Returns
 -- the previous value of the mutable variable. Implies a full memory barrier.
 --
@@ -397,6 +428,16 @@ atomicAndFetchNewPVar (PVar mba#) a =
   prim $ atomicAndFetchNewMutableByteArray# mba# 0# a
 {-# INLINE atomicAndFetchNewPVar #-}
 
+
+
+-- | Binary negation of conjuction (NAND), corresponds to @\\x y ->
+-- `Data.Bits.complement` (x `Data.Bits..&.` y)@ done atomically. Implies a full memory
+-- barrier.
+--
+-- @since 2.0.0
+atomicNandPVar_ :: (AtomicBits e, MonadPrim s m) => PVar e s -> e -> m ()
+atomicNandPVar_ pvar a = void $ atomicNandFetchOldPVar pvar a
+{-# INLINE atomicNandPVar_ #-}
 
 -- | Binary negation of conjuction (NAND), corresponds to @\\x y -> `Data.Bits.complement` (x
 -- `Data.Bits..&.` y)@ done atomically. Returns the previous value of the mutable variable. Implies
@@ -420,8 +461,17 @@ atomicNandFetchNewPVar (PVar mba#) a =
 
 
 
--- | Binary disjunction (OR), corresponds to @(`Data.Bits..|.`)@ done atomically. Returns the previous
--- value of the mutable variable. Implies a full memory barrier.
+-- | Binary disjunction (OR), corresponds to @(`Data.Bits..|.`)@ done
+-- atomically. Implies a full memory barrier.
+--
+-- @since 2.0.0
+atomicOrPVar_ :: (AtomicBits e, MonadPrim s m) => PVar e s -> e -> m ()
+atomicOrPVar_ pvar a = void $ atomicOrFetchOldPVar pvar a
+{-# INLINE atomicOrPVar_ #-}
+
+-- | Binary disjunction (OR), corresponds to @(`Data.Bits..|.`)@ done
+-- atomically. Returns the previous value of the mutable variable. Implies a full memory
+-- barrier.
 --
 -- @since 2.0.0
 atomicOrFetchOldPVar :: (AtomicBits e, MonadPrim s m) => PVar e s -> e -> m e
@@ -440,8 +490,17 @@ atomicOrFetchNewPVar (PVar mba#) a =
 {-# INLINE atomicOrFetchNewPVar #-}
 
 
--- | Binary exclusive disjunction (XOR), corresponds to @`Data.Bits.xor`@ done atomically. Returns the
--- previous value of the mutable variable. Implies a full memory barrier.
+-- | Binary exclusive disjunction (XOR), corresponds to @`Data.Bits.xor`@ done
+-- atomically. Implies a full memory barrier.
+--
+-- @since 2.0.0
+atomicXorPVar_ :: (AtomicBits e, MonadPrim s m) => PVar e s -> e -> m ()
+atomicXorPVar_ pvar a = void $ atomicXorFetchOldPVar pvar a
+{-# INLINE atomicXorPVar_ #-}
+
+-- | Binary exclusive disjunction (XOR), corresponds to @`Data.Bits.xor`@ done
+-- atomically. Returns the previous value of the mutable variable. Implies a full memory
+-- barrier.
 --
 -- @since 2.0.0
 atomicXorFetchOldPVar :: (AtomicBits e, MonadPrim s m) => PVar e s -> e -> m e
@@ -459,8 +518,17 @@ atomicXorFetchNewPVar (PVar mba#) a =
 {-# INLINE atomicXorFetchNewPVar #-}
 
 
--- | Binary negation (NOT), corresponds to ones' @`Data.Bits.complement`@ done atomically. Returns the
--- previous value of the mutable variable. Implies a full memory barrier.
+-- | Binary negation (NOT), corresponds to ones' @`Data.Bits.complement`@ done
+-- atomically. Implies a full memory barrier.
+--
+-- @since 2.0.0
+atomicNotPVar_ :: (AtomicBits e, MonadPrim s m) => PVar e s -> m ()
+atomicNotPVar_ = void . atomicNotFetchOldPVar
+{-# INLINE atomicNotPVar_ #-}
+
+-- | Binary negation (NOT), corresponds to ones' @`Data.Bits.complement`@ done
+-- atomically. Returns the previous value of the mutable variable. Implies a full memory
+-- barrier.
 --
 -- @since 2.0.0
 atomicNotFetchOldPVar :: (AtomicBits e, MonadPrim s m) => PVar e s -> m e
