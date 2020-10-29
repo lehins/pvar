@@ -13,6 +13,6 @@ extra-deps:
 - hspec-expectations-0.8.2@sha256:e2db24881baadc2d9d23b03cb629e80dcbda89a6b04ace9adb5f4d02ef8b31aa,1594
 - quickcheck-io-0.2.0@sha256:7bf0b68fb90873825eb2e5e958c1b76126dcf984debb998e81673e6d837e0b2d,1133
 - github: lehins/primal
-  commit: 33b428e37cc820498b75149d2718d561c7f6b9d4
+  commit: 69241d4c6b2beb377d67e9d4f1c6e0250880a651
   subdirs:
     - primal
