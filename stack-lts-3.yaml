@@ -19,6 +19,6 @@ extra-deps:
 - transformers-0.4.3.0@sha256:60dafcffe8c4fe6f3760426fc35a325c8e6419877596518c76f46657280207a9,2753
 - unliftio-core-0.2.0.1@sha256:9b3e44ea9aacacbfc35b3b54015af450091916ac3618a41868ebf6546977659a,1082
 - github: lehins/primal
-  commit: f6a6c4b90c9c59a99cfac6035fef0a58331d8582
+  commit: 00e14440138e671ca4417271a657ea1d1d1d73c2
   subdirs:
     - primal
