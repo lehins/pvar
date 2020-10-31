@@ -1,11 +1,6 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UnboxedTuples #-}
-{-# LANGUAGE UnliftedFFITypes #-}
 -- |
 -- Module      : Data.Prim.PVar.Internal
 -- Copyright   : (c) Alexey Kuleshevich 2020
@@ -35,6 +30,7 @@ module Data.Prim.PVar.Internal
   where
 
 import Control.DeepSeq
+import Control.Prim.Eval
 import Control.Prim.Monad
 import Data.Prim
 import Data.Prim.Class

@@ -3,24 +3,18 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Main where
 
-import Control.DeepSeq
-import Control.Monad
+import Control.Prim.Eval
 import Control.Prim.Monad
 import Criterion.Main
-import Data.Int
-import Data.IORef
 import Data.Atomics
+import Data.IORef as Base
+import Data.Int
+import Data.Prim.Ref
 --import Data.Prim.Atomic
 import Data.Prim.PVar
 import Prelude as P
 import UnliftIO.Async
 import UnliftIO.Concurrent
-
-
-newtype BogusNF a = BogusNF a
-
-instance NFData (BogusNF a) where
-  rnf (BogusNF a) = a `seq` ()
 
 benchConcN ::
      (Num a, Enum a)
@@ -31,7 +25,7 @@ benchConcN ::
   -> (ref -> a -> IO b)
   -> Benchmark
 benchConcN c n mkEnv name f =
-  env (BogusNF <$> mkEnv) $ \(BogusNF ref) ->
+  env (BNF <$> mkEnv) $ \(BNF ref) ->
     bench name $ whnfIO $ pooledForConcurrentlyN_ c [1 .. n] (f ref)
 
 
@@ -47,16 +41,18 @@ main = do
          in a'
       mkPVar :: Prim e => (Int -> e) -> IO (PVar e RW)
       mkPVar f = newPVar (f e0)
-      mkIORef :: (Int -> e) -> IO (IORef e)
+      mkRef :: (Int -> e) -> IO (Ref e RW)
+      mkRef f = newRef (f e0)
+      mkIORef :: (Int -> e) -> IO (Base.IORef e)
       mkIORef f = newIORef (f e0)
-      withIORef :: e -> (IORef e -> Benchmark) -> Benchmark
-      withIORef e g = env (BogusNF <$> newIORef e) $ \ref -> g (coerce ref)
+      withIORef :: e -> (Base.IORef e -> Benchmark) -> Benchmark
+      withIORef e g = env (BNF <$> newIORef e) $ \ref -> g (coerce ref)
       benchSeq mkEnv name f =
-        env (BogusNF <$> mkEnv) $ \(BogusNF ref) ->
+        env (BNF <$> mkEnv) $ \(BNF ref) ->
           bench name $ whnfIO $ forM_ [1 .. n] (f ref)
       benchConc mkEnv name f =
-        env (BogusNF <$> mkEnv) $ \(BogusNF ref) ->
-          bench name $ whnfIO $ pooledForConcurrentlyN_ c [1 .. n] (f ref)
+        env (BNF <$> mkEnv) $ \(BNF ref) ->
+          bench name $ nfIO $ pooledForConcurrentlyN_ c [1 .. n] (f ref)
   defaultMain
     [ bgroup
         "Single"
@@ -181,7 +177,9 @@ main = do
                 ]
             , bgroup
                 "IORef"
-                [ benchConc (mkIORef id) "atomicModifyIORef'" $ \ioRef k' ->
+                [ benchConc (mkRef id) "atomicModifyRef" $ \ioRef k' ->
+                    atomicModifyRef ioRef (\x -> (x + k', x))
+                , benchConc (mkIORef id) "atomicModifyIORef'" $ \ioRef k' ->
                     atomicModifyIORef' ioRef (\x -> (x + k', x))
                 , benchConc (mkIORef id) "atomicModifyIORefCAS" $ \ioRef k' ->
                     atomicModifyIORefCAS ioRef (\x -> (x + k', x))
@@ -201,7 +199,9 @@ main = do
                 ]
             , bgroup
                 "IORef"
-                [ benchConc (mkIORef tup) "atomicModifyIORef'" $ \ioRef k' ->
+                [ benchConc (mkRef tup) "atomicModifyRef" $ \ioRef k' ->
+                    atomicModifyRef ioRef (\a -> (addTup k' a, a))
+                , benchConc (mkIORef tup) "atomicModifyIORef'" $ \ioRef k' ->
                     atomicModifyIORef' ioRef (\a -> (addTup k' a, a))
                 , benchConc (mkIORef tup) "atomicModifyIORefCAS" $ \ioRef k' ->
                     atomicModifyIORefCAS ioRef (\a -> (addTup k' a, a))

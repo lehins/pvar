@@ -1,10 +1,6 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE UnboxedTuples #-}
-#if __GLASGOW_HASKELL__ >= 800
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
-#endif
 -- |
 -- Module      : Data.Prim.PVar
 -- Copyright   : (c) Alexey Kuleshevich 2020
@@ -88,6 +84,7 @@ module Data.Prim.PVar
   , module Data.Prim
   ) where
 
+import Control.Prim.Eval
 import Control.Prim.Monad
 import Data.Prim
 import Data.Prim.Atomic
@@ -117,8 +114,7 @@ withPtrPVar pvar f =
     Nothing -> return Nothing
     Just ptr -> do
       r <- f ptr
-      touch pvar
-      return $ Just r
+      Just r <$ touch pvar
 {-# INLINE withPtrPVar #-}
 
 -- | Apply an action to the newly allocated mutable variable and the `Ptr` that references
