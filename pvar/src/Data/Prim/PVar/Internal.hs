@@ -1,6 +1,5 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -132,7 +131,7 @@ unsafeToPtrPVar :: PVar a s -> Ptr a
 unsafeToPtrPVar (PVar mba#) = Ptr (byteArrayContents# (unsafeCoerce# mba#))
 {-# INLINE unsafeToPtrPVar #-}
 
--- helper that filles the PVar before running the action
+-- helper that fills the PVar before running the action
 unsafeWithPtrPVar ::
      (Prim a, MonadPrim s m)
   => PVar a s
